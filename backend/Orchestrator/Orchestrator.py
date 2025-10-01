@@ -12,6 +12,63 @@ try:
         prompt_template = f.read()
 except FileNotFoundError:
     prompt_template = "You are a query analyzer. Analyze the user query and determine the best processing method."
+
+from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_openai import ChatOpenAI
+import json
+
+def _format_last_turns(messages, k=3):
+    tail = []
+    for m in (messages or [])[-k:]:
+        role = (m.get("type") or m.get("role") or "").lower()
+        content = m.get("content") if isinstance(m, dict) else getattr(m, "content", "")
+        if not content:
+            continue
+        speaker = "User" if role in ("human", "user") else "Assistant"
+        tail.append(f"{speaker}: {content}")
+    return "\n".join(tail)
+
+async def summarizer(state, keep_last=3) -> None:
+    """
+    Compress the older part of the conversation to reduce tokens.
+    Keep the latest `keep_last` turns verbatim; summarize the rest into context.session.summary.
+    """
+    msgs = state.get("messages") or []
+    if len(msgs) <= keep_last:
+        return
+    older = msgs[:-keep_last]
+    tail = msgs[-keep_last:]
+
+    older_lines = []
+    for m in older:
+        role = (m.get("type") or m.get("role") or "").lower()
+        content = m.get("content") if isinstance(m, dict) else getattr(m, "content", "")
+        if not content:
+            continue
+        speaker = "User" if role in ("human", "user") else "Assistant"
+        older_lines.append(f"{speaker}: {content}")
+    older_text = "\n".join(older_lines)[:8000]  
+    sys = (
+        "You are a concise conversation summarizer. Produce a compact summary of the prior dialogue. "
+        "Preserve key entities, intents, constraints, user preferences, and any lists (e.g., recommended books) "
+        "so follow-up questions can be answered consistently. Output plain text, no markdown."
+    )
+    usr = f"Summarize the following conversation:\n\n{older_text}\n\nReturn only the summary."
+    try:
+        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
+        result = await llm.ainvoke([SystemMessage(content=sys), HumanMessage(content=usr)])
+        summary = (result.content or "").strip()
+    except Exception:
+        summary = "Conversation so far: user asked questions; assistant answered with recommendations and details."
+
+    # Store in context
+    ctx = state.get("context") or {}
+    sess = ctx.get("session") or {}
+    sess["summary"] = summary
+    ctx["session"] = sess
+    state["context"] = ctx
+    state["messages"] = tail
+
 async def is_folloup(user_query: str,
     history: List[dict],
     docs_present: bool,
@@ -81,6 +138,7 @@ async def analyze_query(user_query: str, prompt_template: str, llm: str) -> Opti
         json_match = re.search(r'\{[\s\S]*\}', content)
         if json_match:
             json_str = json_match.group(0)
+            json_str = json_str.replace("{{", "{").replace("}}", "}")
             print(f"Extracted JSON: {json_str}")
             return json.loads(json_str)
         return json.loads(content)
@@ -90,7 +148,50 @@ async def analyze_query(user_query: str, prompt_template: str, llm: str) -> Opti
         traceback.print_exc()
         return None
 
+async def rewrite_query(state: GraphState) -> str:
+    """Rewrite user query into standalone query using history + past outputs."""
+    summary = state.get("context", {}).get("session", {}).get("summary", "")
+    messages = state.get("messages") or []
+    recent_turns = "\n".join([f"{m.get('role','user')}: {m.get('content')}" for m in messages[-3:]])
+    prev_outputs = "\n".join([f"{o['node']}: {o['output']}" for o in state.get("intermediate_results", [])])
+
+    rewrite_prompt = f"""
+Conversation summary: {summary}
+Recent turns:\n{recent_turns}
+Previous node outputs:\n{prev_outputs}
+
+User's current query: {state.get("user_query","")}
+
+Task: Rewrite this into a clear, standalone query for the next node.
+- Resolve pronouns and vague references (e.g., 'him', 'those').
+- Incorporate previous outputs if needed.
+- Output only the rewritten query.
+"""
+
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
+    try:
+        result = await llm.ainvoke([HumanMessage(content=rewrite_prompt)])
+        return result.content.strip()
+    except Exception as e:
+        print("Rewrite error:", e)
+        return state.get("user_query", "")
+    
+def normalize_route(name: str) -> str:
+    if not name:
+        return "SimpleLLM"
+    key = name.lower().strip()
+    mapping = {
+        "web_search": "WebSearch",
+        "websearch": "WebSearch",
+        "search": "WebSearch",
+        "rag": "RAG",
+        "simple_llm": "SimpleLLM",
+        "llm": "SimpleLLM",
+        "end": "END",
+    }
+    return mapping.get(key, name)
 async def orchestrator(state: GraphState) -> GraphState:
+    await summarizer(state, keep_last=3)
     user_query = state.get("user_query", "")
     docs = state.get("doc", [])
     llm_model = state.get("llm_model", "gpt-4o")
@@ -100,10 +201,68 @@ async def orchestrator(state: GraphState) -> GraphState:
     mcp_schema = state.get("mcp_schema", {})
     kb = state.get("kb", {})
     websearch = state.get("web_search", False)
+    print(f"wbeserac.............", {websearch})
     ctx = state.get("context") or {}
     session_meta = ctx.get("session") or {}
     last_route = session_meta.get("last_route")
-    result = await analyze_query(user_query, prompt_template, llm_model)
+    clean_query = await rewrite_query(state)
+    state["resolved_query"] = clean_query
+    if not state.get("active_docs"):
+        state["active_docs"] = None
+        print("[Orchestrator] Initialized active_docs as None.")
+
+    if not state["active_docs"] and docs:
+        latest_doc = docs[-1]  
+        state["active_docs"] = [latest_doc]     
+    if not state.get("tasks"):
+        print(f" Cleaned_query..............", {clean_query})
+        result = await analyze_query(clean_query, prompt_template, llm_model)
+        state["resolved_query"] = clean_query
+        plan = result.get("execution_order", [])
+        if len(plan)==1 and plan[0]=="rag":
+            state["resolved_query"] = user_query
+        else:
+            state["resolved_query"] = clean_query
+        if not plan:
+            plan = ["SimpleLLM"]
+        state["tasks"] = plan
+        state["task_index"] = 0 
+        state["current_task"] = plan[0]
+        route =normalize_route(plan[0]) 
+        state["route"] = route
+
+    else:
+        print(f" Cleaned_query.22222.............", {clean_query})
+        state["resolved_query"] = clean_query
+        completed = state.get("current_task")
+        if completed and state.get("response"):
+            state.setdefault("intermediate_results", []).append({
+                "node": completed,
+                "query": state.get("resolved_query") or state.get("user_query"),
+                "output": state["response"]
+            })
+            state["response"] = None
+
+        idx = state.get("task_index", 0)
+        if idx + 1 < len(state["tasks"]):
+            state["task_index"] = idx + 1
+            next_task = state["tasks"][state["task_index"]]
+            state["current_task"] = next_task
+            route = normalize_route(next_task)
+            clean_query = await rewrite_query(state)
+            state["resolved_query"] = clean_query
+
+        else:
+            if state.get("intermediate_results"):
+                state["final_answer"] = state["intermediate_results"][-1]["output"]
+            else:
+                state["final_answer"] = state.get("response")
+            route = "END"
+
+        state["route"] = route
+
+
+
     
     follow = await is_folloup(
         user_query=user_query,
@@ -112,47 +271,23 @@ async def orchestrator(state: GraphState) -> GraphState:
         kb_present=bool(kb),
         llm_model="gpt-4o-mini"
     )
-    if result is None:
-        print("Query analysis failed, defaulting to SimpleLLM")
-        route = "SimpleLLM"
-    else:
-        is_rag = bool(result.get("rag", False))
-        is_websearch = bool(result.get("web_search", False))
-        is_mcp = bool(result.get("mcp", False))
-        if follow.get("should_use_rag") and (docs or kb):
-            route="RAG"
-            state["rag"]=True
-            if is_websearch:
-              state["web_search"] = True
-        elif is_rag and (docs or kb):
-            state["rag"] = True
-            if is_websearch:
-                state["web_search"] = True    
-            route = "RAG"
-        # elif is_websearch:
-        #     route = "WebSearch"
-        # elif deep_search:
-        #     route = "DeepSearch"
-        # elif is_mcp and mcp_schema and state["mcp"]:
-        #     route = "MCP"
-        #     state["mcp"] = True
-        #     state["mcp_schema"] = mcp_schema
-        else:
-            route = "SimpleLLM"
-            state["rag"] = False              
+    print(f"User_query: {user_query}")
+
      
-    session_meta["last_route"] = route
-    session_meta["followup_judge"] = follow  
-    ctx["session"] = session_meta
+    ctx = state.setdefault("context", {})
+    sess = ctx.setdefault("session", {})
+    history = sess.get("summary", "")
+    latest = f"User: {user_query}\nAssistant: {state.get('response','')}"
+    sess["summary"] = (history + "\n" + latest).strip()
+    ctx["session"] = sess
     state["context"] = ctx
-    state["route"] = route
     print(f"Orchestrator routing to: {route}")
     print(f"Orchestrator output state keys: {list(state.keys())}")
     print(f"Route set in state: {state.get('route')}")
     return state
 
 def route_decision(state: GraphState) -> str:
-    """Determine the next node based on the orchestrator's decision."""
-    print(f"Routing decision based on state: {state.get('route')}")
-    route = state.get("route", "RAG")
+    route = state.get("route", "SimpleLLM")
+    route=normalize_route(route)
+    print(f"Routing decision based on state: {route}")
     return route

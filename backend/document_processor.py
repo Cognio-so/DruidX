@@ -1,20 +1,22 @@
-import streamlit as st
 from typing import List, Dict, Any
-import PyPDF2
+import pypdf
 import docx
+import json
 from io import BytesIO
 import uuid
+from fastapi import UploadFile
+from models import DocumentInfo
 
 def extract_text_from_pdf(file_content: bytes) -> str:
     """Extract text from PDF file"""
     try:
-        pdf_reader = PyPDF2.PdfReader(BytesIO(file_content))
+        pdf_reader = pypdf.PdfReader(BytesIO(file_content))
         text = ""
         for page in pdf_reader.pages:
             text += page.extract_text() + "\n"
         return text
     except Exception as e:
-        st.error(f"Error reading PDF: {e}")
+        print(f"Error reading PDF: {e}")
         return ""
 
 def extract_text_from_docx(file_content: bytes) -> str:
@@ -26,7 +28,7 @@ def extract_text_from_docx(file_content: bytes) -> str:
             text += paragraph.text + "\n"
         return text
     except Exception as e:
-        st.error(f"Error reading DOCX: {e}")
+        print(f"Error reading DOCX: {e}")
         return ""
 
 def extract_text_from_txt(file_content: bytes) -> str:
@@ -34,44 +36,116 @@ def extract_text_from_txt(file_content: bytes) -> str:
     try:
         return file_content.decode('utf-8')
     except Exception as e:
-        st.error(f"Error reading TXT: {e}")
+        print(f"Error reading TXT: {e}")
         return ""
 
-def process_uploaded_files(uploaded_files: List[Any]) -> List[Dict[str, Any]]:
-    """Process uploaded files and extract text content"""
+def extract_text_from_json(file_content: bytes) -> str:
+    """Extract text from JSON file"""
+    try:
+        data = json.loads(file_content.decode('utf-8'))
+        # Convert JSON to readable text format
+        if isinstance(data, dict):
+            text = ""
+            for key, value in data.items():
+                text += f"{key}: {value}\n"
+            return text
+        elif isinstance(data, list):
+            text = ""
+            for i, item in enumerate(data):
+                text += f"Item {i+1}: {item}\n"
+            return text
+        else:
+            return str(data)
+    except Exception as e:
+        print(f"Error reading JSON: {e}")
+        return ""
+
+async def process_uploaded_files_api(uploaded_files: List[UploadFile]) -> List[DocumentInfo]:
+    """Process uploaded files and extract text content for API"""
     processed_docs = []
     
     for file in uploaded_files:
         if file is not None:
-            file_content = file.read()
-            file_type = file.type
-            if file_type == "application/pdf":
-                text = extract_text_from_pdf(file_content)
-            elif file_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-                text = extract_text_from_docx(file_content)
-            elif file_type == "text/plain":
-                text = extract_text_from_txt(file_content)
-            else:
-                st.warning(f"Unsupported file type: {file_type}")
+            try:
+                # Read file content
+                file_content = await file.read()
+                file_extension = file.filename.split('.')[-1].lower() if '.' in file.filename else 'txt'
+                file_id = str(uuid.uuid4())
+                
+                # Extract text based on file type
+                text = ""
+                if file_extension == 'pdf':
+                    text = extract_text_from_pdf(file_content)
+                elif file_extension == 'docx':
+                    text = extract_text_from_docx(file_content)
+                elif file_extension == 'txt':
+                    text = extract_text_from_txt(file_content)
+                elif file_extension == 'json':
+                    text = extract_text_from_json(file_content)
+                else:
+                    text = extract_text_from_txt(file_content)  # Default fallback
+                
+                if text.strip():
+                    # Create DocumentInfo object with correct fields
+                    doc_info = DocumentInfo(
+                        id=file_id,
+                        filename=file.filename,
+                        content=text,
+                        file_type=file_extension,
+                        file_url=f"uploaded/{file.filename}",  # Simple URL for now
+                        size=len(file_content)
+                    )
+                    processed_docs.append(doc_info)
+                else:
+                    print(f"No text content found in {file.filename}")
+                    
+            except Exception as e:
+                print(f"Error processing {file.filename}: {e}")
                 continue
-            
-            if text.strip():
-                processed_docs.append({
-                    "filename": file.name,
-                    "content": text,
-                    "type": file_type,
-                    "id": str(uuid.uuid4())
-                })
-            else:
-                st.warning(f"No text content found in {file.name}")
     
     return processed_docs
 
-def display_document_preview(docs: List[Dict[str, Any]], title: str = "Documents"):
-    """Display a preview of processed documents"""
-    if docs:
-        with st.expander(f"📄 {title} Preview ({len(docs)} files)"):
-            for i, doc in enumerate(docs):
-                st.write(f"**{i+1}. {doc['filename']}**")
-                preview = doc['content'][:200] + "..." if len(doc['content']) > 200 else doc['content']
-                st.text_area(f"Preview {i+1}", preview, height=100, key=f"preview_{doc['id']}")
+async def process_knowledge_base_files(uploaded_files: List[UploadFile]) -> List[DocumentInfo]:
+    """Process knowledge base files and extract text content"""
+    processed_docs = []
+    
+    for file in uploaded_files:
+        if file is not None:
+            try:
+                # Read file content
+                file_content = await file.read()
+                file_extension = file.filename.split('.')[-1].lower() if '.' in file.filename else 'txt'
+                file_id = str(uuid.uuid4())
+                
+                # Extract text based on file type
+                text = ""
+                if file_extension == 'pdf':
+                    text = extract_text_from_pdf(file_content)
+                elif file_extension == 'docx':
+                    text = extract_text_from_docx(file_content)
+                elif file_extension == 'txt':
+                    text = extract_text_from_txt(file_content)
+                elif file_extension == 'json':
+                    text = extract_text_from_json(file_content)
+                else:
+                    text = extract_text_from_txt(file_content)  # Default fallback
+                
+                if text.strip():
+                    # Create DocumentInfo object with correct fields
+                    doc_info = DocumentInfo(
+                        id=file_id,
+                        filename=file.filename,
+                        content=text,
+                        file_type=file_extension,
+                        file_url=f"kb/{file.filename}",  # Simple URL for KB docs
+                        size=len(file_content)
+                    )
+                    processed_docs.append(doc_info)
+                else:
+                    print(f"No text content found in KB file {file.filename}")
+                    
+            except Exception as e:
+                print(f"Error processing KB file {file.filename}: {e}")
+                continue
+    
+    return processed_docs

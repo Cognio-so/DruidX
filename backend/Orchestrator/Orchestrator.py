@@ -196,6 +196,8 @@ async def orchestrator(state: GraphState) -> GraphState:
     docs = state.get("doc", [])
     llm_model = state.get("llm_model", "gpt-4o")
     rag = state.get("rag", False)
+    uploaded_doc=state.get("uploaded_doc", False)
+    print(f" Uploaded doc in sthis ..------------------", uploaded_doc)
     deep_search = state.get("deep_search", False)
     mcp = state.get("mcp", False)
     mcp_schema = state.get("mcp_schema", {})
@@ -207,24 +209,47 @@ async def orchestrator(state: GraphState) -> GraphState:
     last_route = session_meta.get("last_route")
     clean_query = await rewrite_query(state)
     state["resolved_query"] = clean_query
+    
+    print(f"Rag.................", rag)
+    print(f"Deep[research-------------", deep_search)
+
     if not state.get("active_docs"):
         state["active_docs"] = None
         print("[Orchestrator] Initialized active_docs as None.")
 
-    if not state["active_docs"] and docs:
-        latest_doc = docs[-1]  
-        state["active_docs"] = [latest_doc]     
+    if docs:
+        latest_doc = docs[-1]
+        if not state.get("active_docs") or latest_doc != state["active_docs"][-1]:
+            state["active_docs"] = [latest_doc]
+            print(f"[Orchestrator] Refreshed active_docs with new upload")
+     
     if not state.get("tasks"):
-        print(f" Cleaned_query..............", {clean_query})
-        result = await analyze_query(clean_query, prompt_template, llm_model)
-        state["resolved_query"] = clean_query
-        plan = result.get("execution_order", [])
-        if len(plan)==1 and plan[0]=="rag":
-            state["resolved_query"] = user_query
+        if state.get("deep_search", False):
+            print("[Orchestrator] Deep search toggle is ON → forcing deepResearch route")
+            plan = ["deepResearch"]
+            state["resolved_query"] = user_query   # keep raw query
         else:
+            print(f" Cleaned_query..............", {clean_query})
+            result = await analyze_query(clean_query, prompt_template, llm_model)
             state["resolved_query"] = clean_query
-        if not plan:
-            plan = ["SimpleLLM"]
+            plan = result.get("execution_order", [])
+            if uploaded_doc:
+                print(f"hi......................")
+                if len(plan) == 1 and plan[0].lower() == "rag":
+                    pass  
+                elif (len(plan) == 1 or len(plan)==0) and plan[0].lower() != "rag":
+                    plan = ["rag"]
+                else:
+                    pass
+
+                print(f"[Orchestrator] New doc uploaded → updated plan = {plan}")
+
+            if len(plan)==1 and plan[0]=="rag":
+                state["resolved_query"] = user_query
+            else:
+                state["resolved_query"] = clean_query
+            if not plan:
+                plan = ["SimpleLLM"]
         state["tasks"] = plan
         state["task_index"] = 0 
         state["current_task"] = plan[0]

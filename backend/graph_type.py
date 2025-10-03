@@ -13,6 +13,7 @@ class GraphState(TypedDict, total=False):
     mcp_schema: Optional[Dict[str, Any]]
     web_search: Optional[bool]
     rag: Optional[bool]  # hybrid rag only
+    uploaded_doc: Optional[bool]  # uploaded document indicator
     messages: List[Dict[str, Any]]
     route: Optional[str]
     response: Optional[str]

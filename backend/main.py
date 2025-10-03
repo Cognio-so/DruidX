@@ -247,7 +247,7 @@ async def chat(session_id: str, request: ChatRequest):
     print(f"GPT config: {gpt_config}")
     
     # Get LLM model
-    llm_model = gpt_config.get("model", "gpt-4o")
+    llm_model = gpt_config.get("model", "gpt-4o-mini")
     print(f"LLM model: {llm_model}")
     
     try:
@@ -284,11 +284,16 @@ async def chat(session_id: str, request: ChatRequest):
             gpt_config=gpt_config,
             kb={"text": kb_docs_content} if kb_docs_content else None,
             web_search=request.web_search,  # Use the web search toggle from request
-            rag=True
+            rag=request.rag,  # Use the RAG toggle from request
+            deep_search=request.deep_search,  # Use the deep search toggle from request
+            uploaded_doc=request.uploaded_doc  # Use the uploaded doc indicator from request
         )
         
         print(f"Created graph state with {len(state['messages'])} messages")  # FIX: Use dict access
         print(f"Web search enabled in state: {state.get('web_search')}")
+        print(f"RAG enabled in state: {state.get('rag')}")
+        print(f"Deep search enabled in state: {state.get('deep_search')}")
+        print(f"Uploaded doc indicator in state: {state.get('uploaded_doc')}")
         
         # Process through graph
         result = await graph.ainvoke(state)

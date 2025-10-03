@@ -13,7 +13,7 @@ except FileNotFoundError:
     prompt = "You are a helpful AI assistant."
 
 async def SimpleLLm(state: GraphState) -> GraphState:
-    llm_model = state.get("llm_model", "gpt-4o")
+    llm_model = state.get("llm_model", "gpt-4o-mini")
     user_query = state.get("user_query", "")
     past_messages = state.get("messages", [])
     summary = state.get("context", {}).get("session", {}).get("summary", "")
@@ -23,7 +23,7 @@ async def SimpleLLm(state: GraphState) -> GraphState:
         print(f"Using model: {llm_model}")
         print(f"API Key set: {bool(os.getenv('OPENAI_API_KEY'))}")
 
-        chat = ChatOpenAI(model=llm_model or "gpt-4o", temperature=0.2)
+        chat = ChatOpenAI(model=llm_model or "gpt-4o-mini", temperature=0.2)
 
         # Build conversation messages (keep summary + last few turns)
         formatted_history = []

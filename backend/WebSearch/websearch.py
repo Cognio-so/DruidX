@@ -23,7 +23,7 @@ else:
 async def web_search(query: str, max_results: int = 5, search_depth: str="basic") -> List[Document]:
     """Perform Tavily web search and return results as LangChain Documents."""
     print(f"[WebSearch] Starting web search for: {query}")
-    print(f"[WebSearch] Tavily client available: {_tavily is not None}")
+    
     
     if not _tavily:
         print(f"[WebSearch] No Tavily client available")
@@ -32,7 +32,7 @@ async def web_search(query: str, max_results: int = 5, search_depth: str="basic"
     try:
         print(f"[WebSearch] Calling Tavily search API...")
         results = await _tavily.search(query=query, max_results=max_results, search_depth=search_depth)
-        print(f"[WebSearch] Raw Tavily response: {results}")
+        # print(f"[WebSearch] Raw Tavily response: {results}")
         
         docs = []
         for r in results.get("results", []):
@@ -77,9 +77,9 @@ async def run_web_search(state: GraphState) -> GraphState:
 
     print(f"[WebSearch] Calling web_search function...")
     if is_web_search:
-        results = await web_search(query, max_results=5,search_depth="basic")
+        results = await web_search(query, max_results=5,search_depth="advanced")
     else:
-        results = await web_search(query, max_results=2,search_depth="advanced")
+        results = await web_search(query, max_results=2,search_depth="basic")
         
     print(f"[WebSearch] Got {len(results)} results from web_search")
     
@@ -123,20 +123,19 @@ Now synthesize them into a clear, structured answer with:
     print(f"[WebSearch] User prompt created, length: {len(user_prompt)}")
     print(f"[WebSearch] Calling LLM with model: {llm_model}")
     if not is_web_search:
-        extraction_prompt = f"""
-Based ONLY on the following text, provide a concise, 1-3 line answer to the user's question.
-If the text does not contain the answer, simply state that you could not find the information.
+        # Load short/basic prompt
+        prompt_path = os.path.join(os.path.dirname(__file__), "websearch_basic.md")
+        try:
+            with open(prompt_path, 'r', encoding='utf-8') as f:
+                system_prompt = f.read()
+        except FileNotFoundError:
+            system_prompt = "Provide a concise answer (3-5 sentences) based only on the search results. Cite as [Source X]."
 
-USER QUESTION:
-"{query}"
-
-TEXT:
-"{sources_text}"
-
-CONCISE ANSWER:
-"""
         llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
-        answer = await llm.ainvoke(extraction_prompt)
+        answer = await llm.ainvoke([
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=f"User Query: {query}\n\nSearch Results:\n{sources_text}")
+        ])
     else:    
         llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
         answer = await llm.ainvoke([

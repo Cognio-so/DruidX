@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Send, Plus, FileText, Search, Globe } from 'lucide-react'
+import { Send, Plus, FileText, Search, Globe, Database } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
 import toast from 'react-hot-toast'
 import { sendMessage, uploadDocuments } from '../services/api'
@@ -10,6 +10,9 @@ function ChatInterface({ sessionId, gptConfig }) {
   const [isLoading, setIsLoading] = useState(false)
   const [showFileUpload, setShowFileUpload] = useState(false)
   const [webSearchEnabled, setWebSearchEnabled] = useState(false)
+  const [ragEnabled, setRagEnabled] = useState(false)
+  const [deepSearchEnabled, setDeepSearchEnabled] = useState(false)
+  const [hasUploadedDocs, setHasUploadedDocs] = useState(false)
   const messagesEndRef = useRef(null)
 
   const scrollToBottom = () => {
@@ -25,6 +28,7 @@ function ChatInterface({ sessionId, gptConfig }) {
       const result = await uploadDocuments(sessionId, acceptedFiles, 'user')
       toast.success(`Uploaded ${result.documents.length} documents`)
       setShowFileUpload(false)
+      setHasUploadedDocs(true) // Mark that documents have been uploaded
     } catch (error) {
       toast.error('Failed to upload documents')
     }
@@ -48,8 +52,10 @@ function ChatInterface({ sessionId, gptConfig }) {
     setIsLoading(true)
 
     try {
-      const response = await sendMessage(sessionId, inputMessage, webSearchEnabled)
+      const response = await sendMessage(sessionId, inputMessage, webSearchEnabled, ragEnabled, deepSearchEnabled, hasUploadedDocs)
       setMessages(prev => [...prev, { role: 'assistant', content: response.message }])
+      // Reset the uploaded docs flag after sending message
+      setHasUploadedDocs(false)
     } catch (error) {
       toast.error('Failed to send message')
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }])
@@ -107,6 +113,92 @@ function ChatInterface({ sessionId, gptConfig }) {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {/* Deep Search Toggle */}
+            <button
+              onClick={() => setDeepSearchEnabled(!deepSearchEnabled)}
+              style={{
+                background: deepSearchEnabled 
+                  ? 'linear-gradient(135deg, #ed8936 0%, #dd6b20 100%)'
+                  : 'linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%)',
+                color: deepSearchEnabled ? 'white' : '#4a5568',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px 16px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s ease',
+                boxShadow: deepSearchEnabled 
+                  ? '0 4px 12px rgba(237, 137, 54, 0.3)'
+                  : '0 2px 4px rgba(0,0,0,0.1)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)'
+                if (deepSearchEnabled) {
+                  e.target.style.boxShadow = '0 6px 16px rgba(237, 137, 54, 0.4)'
+                } else {
+                  e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)'
+                if (deepSearchEnabled) {
+                  e.target.style.boxShadow = '0 4px 12px rgba(237, 137, 54, 0.3)'
+                } else {
+                  e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'
+                }
+              }}
+            >
+              <Search size={16} />
+              {deepSearchEnabled ? 'Deep Research ON' : 'Deep Research OFF'}
+            </button>
+
+            {/* RAG Toggle */}
+            <button
+              onClick={() => setRagEnabled(!ragEnabled)}
+              style={{
+                background: ragEnabled 
+                  ? 'linear-gradient(135deg, #9f7aea 0%, #805ad5 100%)'
+                  : 'linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%)',
+                color: ragEnabled ? 'white' : '#4a5568',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px 16px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s ease',
+                boxShadow: ragEnabled 
+                  ? '0 4px 12px rgba(159, 122, 234, 0.3)'
+                  : '0 2px 4px rgba(0,0,0,0.1)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)'
+                if (ragEnabled) {
+                  e.target.style.boxShadow = '0 6px 16px rgba(159, 122, 234, 0.4)'
+                } else {
+                  e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)'
+                if (ragEnabled) {
+                  e.target.style.boxShadow = '0 4px 12px rgba(159, 122, 234, 0.3)'
+                } else {
+                  e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'
+                }
+              }}
+            >
+              <Database size={16} />
+              {ragEnabled ? 'RAG ON' : 'RAG OFF'}
+            </button>
+
             {/* Web Search Toggle */}
             <button
               onClick={() => setWebSearchEnabled(!webSearchEnabled)}
@@ -154,7 +246,9 @@ function ChatInterface({ sessionId, gptConfig }) {
             <button
               onClick={() => setShowFileUpload(!showFileUpload)}
               style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: hasUploadedDocs 
+                  ? 'linear-gradient(135deg, #f56565 0%, #e53e3e 100%)'
+                  : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
@@ -165,19 +259,30 @@ function ChatInterface({ sessionId, gptConfig }) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                boxShadow: hasUploadedDocs 
+                  ? '0 4px 12px rgba(245, 101, 101, 0.3)'
+                  : '0 4px 12px rgba(102, 126, 234, 0.3)'
               }}
               onMouseEnter={(e) => {
                 e.target.style.transform = 'translateY(-2px)'
-                e.target.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)'
+                if (hasUploadedDocs) {
+                  e.target.style.boxShadow = '0 6px 16px rgba(245, 101, 101, 0.4)'
+                } else {
+                  e.target.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.4)'
+                }
               }}
               onMouseLeave={(e) => {
                 e.target.style.transform = 'translateY(0)'
-                e.target.style.boxShadow = 'none'
+                if (hasUploadedDocs) {
+                  e.target.style.boxShadow = '0 4px 12px rgba(245, 101, 101, 0.3)'
+                } else {
+                  e.target.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)'
+                }
               }}
             >
               <Plus size={16} />
-              Add Documents
+              {hasUploadedDocs ? 'Documents Ready' : 'Add Documents'}
             </button>
           </div>
         </div>
@@ -226,21 +331,60 @@ function ChatInterface({ sessionId, gptConfig }) {
             }}>
               <h3 style={{ color: '#2d3748', marginBottom: '8px' }}>Start a conversation!</h3>
               <p style={{ color: '#718096' }}>Ask questions or upload documents to get started.</p>
-              {webSearchEnabled && (
-                <p style={{ 
-                  color: '#48bb78', 
-                  fontSize: '14px', 
-                  fontWeight: '500',
-                  marginTop: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px'
-                }}>
-                  <Globe size={16} />
-                  Web search is enabled
-                </p>
-              )}
+              <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                {hasUploadedDocs && (
+                  <p style={{ 
+                    color: '#f56565', 
+                    fontSize: '14px', 
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <FileText size={16} />
+                    Documents uploaded and ready
+                  </p>
+                )}
+                {deepSearchEnabled && (
+                  <p style={{ 
+                    color: '#ed8936', 
+                    fontSize: '14px', 
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <Search size={16} />
+                    Deep research is enabled
+                  </p>
+                )}
+                {ragEnabled && (
+                  <p style={{ 
+                    color: '#9f7aea', 
+                    fontSize: '14px', 
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <Database size={16} />
+                    RAG is enabled
+                  </p>
+                )}
+                {webSearchEnabled && (
+                  <p style={{ 
+                    color: '#48bb78', 
+                    fontSize: '14px', 
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <Globe size={16} />
+                    Web search is enabled
+                  </p>
+                )}
+              </div>
             </div>
           ) : (
             messages.map((message, index) => (
@@ -271,8 +415,12 @@ function ChatInterface({ sessionId, gptConfig }) {
                   gap: '6px'
                 }}>
                   {message.role === 'user' ? 'You' : gptConfig.name}
-                  {message.role === 'user' && webSearchEnabled && (
-                    <Globe size={12} style={{ opacity: 0.7 }} />
+                  {message.role === 'user' && (
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      {deepSearchEnabled && <Search size={12} style={{ opacity: 0.7 }} />}
+                      {ragEnabled && <Database size={12} style={{ opacity: 0.7 }} />}
+                      {webSearchEnabled && <Globe size={12} style={{ opacity: 0.7 }} />}
+                    </div>
                   )}
                 </div>
                 <div style={{ 
@@ -309,10 +457,20 @@ function ChatInterface({ sessionId, gptConfig }) {
                 gap: '6px'
               }}>
                 {gptConfig.name}
-                {webSearchEnabled && <Globe size={12} />}
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {deepSearchEnabled && <Search size={12} />}
+                  {ragEnabled && <Database size={12} />}
+                  {webSearchEnabled && <Globe size={12} />}
+                </div>
               </div>
               <div style={{ color: '#667eea', fontStyle: 'italic' }}>
-                {webSearchEnabled ? 'Searching the web and thinking...' : 'Thinking...'}
+                {deepSearchEnabled && ragEnabled && webSearchEnabled ? 'Performing deep research with RAG and web search...' :
+                 deepSearchEnabled && ragEnabled ? 'Performing deep research with RAG...' :
+                 deepSearchEnabled && webSearchEnabled ? 'Performing deep research and searching the web...' :
+                 ragEnabled && webSearchEnabled ? 'Using RAG and searching the web...' :
+                 deepSearchEnabled ? 'Performing deep research...' :
+                 ragEnabled ? 'Using RAG to find relevant information...' :
+                 webSearchEnabled ? 'Searching the web and thinking...' : 'Thinking...'}
               </div>
             </div>
           )}
@@ -338,7 +496,24 @@ function ChatInterface({ sessionId, gptConfig }) {
               minHeight: '50px',
               maxHeight: '120px'
             }}
-            placeholder={webSearchEnabled ? "Type your message (web search enabled)..." : "Type your message..."}
+            placeholder={
+              hasUploadedDocs && deepSearchEnabled && ragEnabled && webSearchEnabled ? "Type your message (Documents + Deep Research + RAG + Web search enabled)..." :
+              hasUploadedDocs && deepSearchEnabled && ragEnabled ? "Type your message (Documents + Deep Research + RAG enabled)..." :
+              hasUploadedDocs && deepSearchEnabled && webSearchEnabled ? "Type your message (Documents + Deep Research + Web search enabled)..." :
+              hasUploadedDocs && ragEnabled && webSearchEnabled ? "Type your message (Documents + RAG + Web search enabled)..." :
+              hasUploadedDocs && deepSearchEnabled ? "Type your message (Documents + Deep research enabled)..." :
+              hasUploadedDocs && ragEnabled ? "Type your message (Documents + RAG enabled)..." :
+              hasUploadedDocs && webSearchEnabled ? "Type your message (Documents + Web search enabled)..." :
+              hasUploadedDocs ? "Type your message (Documents uploaded)..." :
+              deepSearchEnabled && ragEnabled && webSearchEnabled ? "Type your message (Deep Research + RAG + Web search enabled)..." :
+              deepSearchEnabled && ragEnabled ? "Type your message (Deep Research + RAG enabled)..." :
+              deepSearchEnabled && webSearchEnabled ? "Type your message (Deep Research + Web search enabled)..." :
+              ragEnabled && webSearchEnabled ? "Type your message (RAG + Web search enabled)..." :
+              deepSearchEnabled ? "Type your message (Deep research enabled)..." :
+              ragEnabled ? "Type your message (RAG enabled)..." :
+              webSearchEnabled ? "Type your message (web search enabled)..." : 
+              "Type your message..."
+            }
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}

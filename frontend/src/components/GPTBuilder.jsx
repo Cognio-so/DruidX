@@ -8,7 +8,7 @@ function GPTBuilder({ sessionId, onGPTCreated }) {
   const [config, setConfig] = useState({
     name: '',
     description: '',
-    model: 'gpt-4o',
+    model: 'gpt-4o-mini',
     system_prompt: '',
     temperature: 0.7
   })

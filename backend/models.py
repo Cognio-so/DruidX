@@ -10,6 +10,9 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     web_search: Optional[bool] = False  # Add web search toggle
+    rag: Optional[bool] = False  # Add RAG toggle
+    deep_search: Optional[bool] = False  # Add deep search toggle
+    uploaded_doc: Optional[bool] = False  # Add uploaded doc indicator
 
 class ChatResponse(BaseModel):
     message: str
@@ -19,7 +22,7 @@ class ChatResponse(BaseModel):
 class GPTConfig(BaseModel):
     name: str
     description: str
-    model: str = "gpt-4o"
+    model: str = "gpt-4o-mini"
     system_prompt: str
     temperature: float = 0.7
     max_tokens: Optional[int] = None

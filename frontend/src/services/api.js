@@ -44,10 +44,13 @@ export const getDocuments = async (sessionId) => {
   return response.data
 }
 
-export const sendMessage = async (sessionId, message, webSearch = false) => {
+export const sendMessage = async (sessionId, message, webSearch = false, rag = false, deepSearch = false, uploadedDoc = false) => {
   const response = await api.post(`/sessions/${sessionId}/chat`, {
     message,
-    web_search: webSearch
+    web_search: webSearch,
+    rag: rag,
+    deep_search: deepSearch,
+    uploaded_doc: uploadedDoc
   })
   return response.data
 }

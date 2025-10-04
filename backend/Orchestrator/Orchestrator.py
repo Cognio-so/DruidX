@@ -6,12 +6,16 @@ from langchain_openai import ChatOpenAI
 import os
 import json
 from typing import List
-prompt_path = os.path.join(os.path.dirname(__file__), "orchestrator.md")
-try:
-    with open(prompt_path, 'r', encoding='utf-8') as f:
-        prompt_template = f.read()
-except FileNotFoundError:
-    prompt_template = "You are a query analyzer. Analyze the user query and determine the best processing method."
+def load_base_prompt() -> str:
+    path = os.path.join(os.path.dirname(__file__), "orchestrator.md")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return "You are a Retrieval-Augmented Generation (RAG) assistant. Answer using only the provided context."
+
+prompt_template = load_base_prompt()
+
 
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI

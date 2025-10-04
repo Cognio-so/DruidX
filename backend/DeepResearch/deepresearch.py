@@ -6,13 +6,45 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from WebSearch.websearch import web_search
 from Rag.Rag import _search_collection, _hybrid_search_rrf
 import json
+from llm import get_reasoning_llm
+
+# Example inside planning step
+llm1 = get_reasoning_llm()
+
 
 prompt_path = os.path.join(os.path.dirname(__file__), "deepresearch.md")
 try:
     with open(prompt_path, 'r', encoding='utf-8') as f:
-        deep_research_prompt = f.read()
+        prompt_content = f.read()
+        # Split the markdown file into sections
+        sections = {}
+        current_section = None
+        current_content = []
+        
+        for line in prompt_content.split('\n'):
+            if line.startswith('# ') and not line.startswith('## '):
+                if current_section and current_content:
+                    sections[current_section] = '\n'.join(current_content).strip()
+                current_section = line[2:].strip()
+                current_content = []
+            else:
+                current_content.append(line)
+        
+        if current_section and current_content:
+            sections[current_section] = '\n'.join(current_content).strip()
+        
+        # Extract specific prompts
+        system_prompt = sections.get('Deep Research System Prompt', '')
+        planning_prompt_template = sections.get('Research Planning Prompt', '')
+        gap_analysis_prompt_template = sections.get('Gap Analysis Prompt', '')
+        synthesis_prompt_template = sections.get('Synthesis Prompt', '')
+        
 except FileNotFoundError:
-    deep_research_prompt = "You are a deep research assistant. Conduct comprehensive multi-iteration research."
+    print("[DeepResearch] Warning: deepresearch.md not found, using fallback prompts")
+    system_prompt = "You are a deep research assistant."
+    planning_prompt_template = "Break down this query into sub-questions: {query}"
+    gap_analysis_prompt_template = "Analyze gaps in research for: {query}"
+    synthesis_prompt_template = "Synthesize findings for: {query}"
 
 
 class DeepResearchState:
@@ -29,37 +61,27 @@ class DeepResearchState:
 
 async def plan_research(query: str, llm_model: str) -> List[str]:
     """
-    Break down the complex query into sub-questions
+    Break down the complex query into sub-questions dynamically based on query complexity
     """
-    planning_prompt = f"""
-{deep_research_prompt}
----
-User's Complex Query: {query}
+    planning_prompt = planning_prompt_template.format(
+        system_prompt=system_prompt,
+        query=query
+    )
 
-Task: Break this down into 3-10 specific sub-questions that need to be answered comprehensively.
-
-Provide sub-questions as a numbered list. Focus on:
-1. Core concepts and definitions
-2. Current state/recent developments
-3. Key challenges or controversies
-4. Practical implications
-5. Future directions (if relevant) etc. other sub-queries
-Sub-questions:
-"""
-
-    llm = ChatOpenAI(model=llm_model, temperature=0.2)
-    response = await llm.ainvoke([HumanMessage(content=planning_prompt)])
+    # llm = ChatOpenAI(model=llm_model, temperature=0.2)
+    response = await llm1.ainvoke([HumanMessage(content=planning_prompt)])
+    
     sub_questions = []
     for line in response.content.split('\n'):
         line = line.strip()
         if line and (line[0].isdigit() or line.startswith('-') or line.startswith('•')):
             cleaned = line.lstrip('0123456789.-•) ').strip()
-            if cleaned:
-                print(f"Cleansed queries", cleaned)
+            if cleaned and len(cleaned) > 15:  # Filter out very short lines
+                print(f"Cleansed queries: {cleaned}")
                 sub_questions.append(cleaned)
     
-    print(f"[DeepResearch] Generated {len(sub_questions)} sub-questions")
-    return sub_questions[:5]  
+    print(f"[DeepResearch] Generated {len(sub_questions)} sub-questions based on query complexity")
+    return sub_questions
 
 
 async def execute_research_iteration(
@@ -89,35 +111,7 @@ async def execute_research_iteration(
                 })
         except Exception as e:
             print(f"[DeepResearch] Web search error: {e}")
-    #     docs = state.get("active_docs")
-    #     kb = state.get("kb")
-    #     if docs:
-    #         try:
-    #             rag_results = await _hybrid_search_rrf("doc_collection", query, limit=3, k=60)
-    #             if rag_results:
-    #                 findings.append({
-    #                     "query": query,
-    #                     "source": "doc",
-    #                     "content": "\n".join(rag_results),
-    #                     "iteration": research_state.current_iteration
-    #                 })
-    #         except Exception as e:
-    #             print(f"[DeepResearch] Doc RAG error: {e}")
-        
-    #     if kb:
-    #         try:
-    #             kb_results = await _hybrid_search_rrf("kb_collection", query, limit=3, k=60)
-    #             if kb_results:
-    #                 findings.append({
-    #                     "query": query,
-    #                     "source": "kb",
-    #                     "content": "\n".join(kb_results),
-    #                     "iteration": research_state.current_iteration
-    #                 })
-    #         except Exception as e:
-    #             print(f"[DeepResearch] KB RAG error: {e}")
     
-    # print(f"[DeepResearch] Gathered {len(findings)} findings in iteration {research_state.current_iteration}")
     return findings
 
 
@@ -127,65 +121,85 @@ async def analyze_gaps(
     llm_model: str
 ) -> Dict[str, Any]:
     """
-    Analyze gathered information and identify knowledge gaps
+    Analyze gathered information and identify knowledge gaps dynamically
     """
-    user_query=state.get("user_query", '')
+    user_query = state.get("user_query", '')
+    
     info_summary = []
-    for item in research_state.gathered_information[-10:]:  
+    for item in research_state.gathered_information[-10:]:
         source_label = item['source'].upper()
-        content_preview = item['content'][:300] + "..." if len(item['content']) > 300 else item['content']
+        content_preview = item['content'][:500] + "..." if len(item['content']) > 300 else item['content']
         info_summary.append(f"[{source_label}] {item['query']}: {content_preview}")
     info_summary_text = "\n\n".join(info_summary)
     
-    analysis_prompt = f"""
-{deep_research_prompt}
----
-Original Query: {user_query}
+    answered_questions = [item['query'] for item in research_state.gathered_information]
+    answered_text = "\n".join([f"- {q}" for q in answered_questions[-10:]])
+    
+    analysis_prompt = gap_analysis_prompt_template.format(
+        system_prompt=system_prompt,
+        query=user_query,
+        research_plan=', '.join(research_state.research_plan),
+        answered_questions=answered_text,
+        current_iteration=research_state.current_iteration,
+        max_iterations=research_state.max_iterations,
+        info_summary=info_summary_text
+    )
 
-Research Plan: {', '.join(research_state.research_plan)}
-Gathered Information Summary (Iteration {research_state.current_iteration}/{research_state.max_iterations}):
-{info_summary_text}
-
----
-Tasks:
-1. Assess if we have enough information to answer the original query comprehensively
-2. Identify any remaining knowledge gaps or unclear areas
-3. Provide a confidence score (0.0-1.0) for how well we can answer the query
-4. List 2-3 specific follow-up questions if gaps exist
-
-Format your response EXACTLY as:
-CONFIDENCE: [0.0-1.0]
-GAPS: [List specific gaps, one per line, or "None"]
-FOLLOW_UP: [Specific questions, one per line, or "None"]
-"""
-
-    llm = ChatOpenAI(model=llm_model, temperature=0.2)
-    response = await llm.ainvoke([HumanMessage(content=analysis_prompt)])
+    # llm = ChatOpenAI(model=llm_model, temperature=0.2)
+    response = await llm1.ainvoke([HumanMessage(content=analysis_prompt)])
     content = response.content
+    
     analysis = {
         "confidence": 0.5,
         "gaps": [],
-        "follow_up_questions": []
+        "follow_up_questions": [],
+        "reasoning": ""
     }
     
     try:
         if "CONFIDENCE:" in content:
             conf_line = content.split("CONFIDENCE:")[1].split("\n")[0].strip()
-            analysis["confidence"] = float(conf_line)
-        if "GAPS:" in content and "FOLLOW_UP:" in content:
-            gaps_section = content.split("GAPS:")[1].split("FOLLOW_UP:")[0].strip()
+            conf_value = ''.join(filter(lambda x: x.isdigit() or x == '.', conf_line))
+            analysis["confidence"] = float(conf_value) if conf_value else 0.5
+        
+        if "GAPS:" in content:
+            if "FOLLOW_UP:" in content:
+                gaps_section = content.split("GAPS:")[1].split("FOLLOW_UP:")[0].strip()
+            else:
+                gaps_section = content.split("GAPS:")[1].strip()
+            
             if "none" not in gaps_section.lower():
-                analysis["gaps"] = [g.strip() for g in gaps_section.split("\n") if g.strip()]
+                gaps = [g.strip() for g in gaps_section.split("\n") if g.strip() and not g.strip().startswith("CONFIDENCE")]
+                analysis["gaps"] = [g for g in gaps if len(g) > 10]
+        
         if "FOLLOW_UP:" in content:
-            followup_section = content.split("FOLLOW_UP:")[1].strip()
+            if "REASONING:" in content:
+                followup_section = content.split("FOLLOW_UP:")[1].split("REASONING:")[0].strip()
+            else:
+                followup_section = content.split("FOLLOW_UP:")[1].strip()
+            
             if "none" not in followup_section.lower():
                 questions = [q.strip() for q in followup_section.split("\n") if q.strip()]
-                analysis["follow_up_questions"] = [q for q in questions if len(q) > 10][:3]
+                # Clean up questions (remove numbering, bullets)
+                cleaned_questions = []
+                for q in questions:
+                    q_cleaned = q.lstrip('0123456789.-•) ').strip()
+                    if len(q_cleaned) > 15 and '?' in q_cleaned:  # Should be substantial and look like a question
+                        cleaned_questions.append(q_cleaned)
+                analysis["follow_up_questions"] = cleaned_questions
+        
+        if "REASONING:" in content:
+            reasoning_section = content.split("REASONING:")[1].strip()
+            analysis["reasoning"] = reasoning_section
     
     except Exception as e:
         print(f"[DeepResearch] Error parsing gap analysis: {e}")
+        print(f"[DeepResearch] Raw content: {content[:500]}")
     
-    print(f"[DeepResearch] Gap Analysis - Confidence: {analysis['confidence']}, Gaps: {len(analysis['follow_up_questions'])}")
+    print(f"[DeepResearch] Gap Analysis - Confidence: {analysis['confidence']:.2f}, Follow-ups: {len(analysis['follow_up_questions'])}")
+    if analysis['reasoning']:
+        print(f"[DeepResearch] Reasoning: {analysis['reasoning'][:200]}")
+    
     return analysis
 
 
@@ -212,40 +226,27 @@ async def synthesize_report(
     if research_state.sources:
         sources_text = "\n".join([f"- {url}" for url in research_state.sources[:10]])
     
-    synthesis_prompt = f"""
-{deep_research_prompt}
-
----
-
-Original Query: {state.get('user_query', '')}
-
-All Gathered Information Across {research_state.current_iteration} Iterations:
-{all_info_text}
-
-Sources Used:
-{sources_text}
-
----
-
-Create a comprehensive, well-structured response that:
-1. Directly answers the original query
-2. Integrates information from multiple sources and iterations
-3. Provides specific examples and evidence
-4. Uses clear headings and structure
-5. Cites sources where appropriate
-6. Acknowledges any limitations or uncertainties
-7. Is clear, accurate, and actionable
-
-Final Report:
-"""
+    synthesis_prompt = synthesis_prompt_template.format(
+        system_prompt=system_prompt,
+        query=state.get('user_query', ''),
+        total_iterations=research_state.current_iteration,
+        confidence=research_state.confidence_score,
+        sources_count=len(set(research_state.sources)),
+        findings_count=len(research_state.gathered_information),
+        all_info=all_info_text,
+        sources=sources_text
+    )
 
     llm = ChatOpenAI(model=llm_model, temperature=0.3)
-    response = await llm.ainvoke([HumanMessage(content=synthesis_prompt)])
+    response = await llm1.ainvoke([HumanMessage(content=synthesis_prompt)])
     
     final_report = response.content
-    if "sources" not in final_report.lower() and research_state.sources:
-        final_report += "\n\n## Sources Used\n"
-        for i, url in enumerate(research_state.sources[:10], 1):
+    
+    # Add sources section if not already included
+    if "sources" not in final_report.lower() and "references" not in final_report.lower() and research_state.sources:
+        final_report += "\n\n## Sources & References\n"
+        unique_sources = list(set(research_state.sources))[:15]
+        for i, url in enumerate(unique_sources, 1):
             final_report += f"{i}. {url}\n"
     
     return final_report
@@ -257,27 +258,31 @@ async def run_deep_research(state: GraphState) -> GraphState:
     """
     query = state.get("resolved_query") or state.get("user_query", "")
     llm_model = state.get("llm_model", "gpt-4o")
-    max_iterations = 3
+    max_iterations = 5
     
     print(f"[DeepResearch] Starting deep research for: {query}")
     research_state = DeepResearchState()
     research_state.max_iterations = max_iterations
     research_state.research_plan = await plan_research(query, llm_model)
-    print(f"reserach plan...", research_state.research_plan)
+    print(f"Research plan: {research_state.research_plan}")
+    
     if not research_state.research_plan:
         state["response"] = "Unable to plan research. Please refine your query."
         return state
+    
     while research_state.current_iteration < research_state.max_iterations:
         print(f"\n[DeepResearch] === Iteration {research_state.current_iteration + 1}/{research_state.max_iterations} ===")
+        
         if research_state.current_iteration == 0:
             queries_to_research = research_state.research_plan
         else:
             queries_to_research = research_state.knowledge_gaps
-            print(f"Gapps_knowledge .............", queries_to_research)
+            print(f"Knowledge gaps to explore: {queries_to_research}")
         
         if not queries_to_research:
             print("[DeepResearch] No queries to research, breaking loop")
             break
+        
         findings = await execute_research_iteration(
             queries_to_research,
             state,
@@ -287,6 +292,7 @@ async def run_deep_research(state: GraphState) -> GraphState:
         
         research_state.gathered_information.extend(findings)
         research_state.current_iteration += 1
+        
         for finding in findings:
             if 'urls' in finding:
                 research_state.sources.extend(finding['urls'])
@@ -295,8 +301,9 @@ async def run_deep_research(state: GraphState) -> GraphState:
             analysis = await analyze_gaps(state, research_state, llm_model)
             research_state.confidence_score = analysis['confidence']
             research_state.knowledge_gaps = analysis['follow_up_questions']
+            
             if research_state.confidence_score >= 0.85:
-                print(f"[DeepResearch] High confidence ({research_state.confidence_score}), stopping early")
+                print(f"[DeepResearch] High confidence ({research_state.confidence_score:.2f}), stopping early")
                 break
             
             if not research_state.knowledge_gaps:
@@ -305,6 +312,7 @@ async def run_deep_research(state: GraphState) -> GraphState:
 
     print(f"\n[DeepResearch] Synthesizing final report...")
     final_report = await synthesize_report(state, research_state, llm_model)
+    
     state["response"] = final_report
     state.setdefault("messages", []).append({
         "role": "assistant",
@@ -323,7 +331,7 @@ async def run_deep_research(state: GraphState) -> GraphState:
     })
     
     print(f"[DeepResearch] Completed in {research_state.current_iteration} iterations")
-    print(f"[DeepResearch] Final confidence: {research_state.confidence_score}")
+    print(f"[DeepResearch] Final confidence: {research_state.confidence_score:.2f}")
     print(f"[DeepResearch] Total findings: {len(research_state.gathered_information)}")
     
     return state

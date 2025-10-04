@@ -19,6 +19,26 @@ if os.getenv("TAVILY_API_KEY"):
 else:
     print(f"[WebSearch] TAVILY_API_KEY not found in environment")
 
+# At top of websearch.py
+PROMPT_PATH = os.path.join(os.path.dirname(__file__), "websearch.md")
+BASIC_PROMPT_PATH = os.path.join(os.path.dirname(__file__), "websearch_basic.md")
+
+def load_prompt(path: str, fallback: str) -> str:
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return fallback
+
+WEBSEARCH_PROMPT = load_prompt(
+    PROMPT_PATH,
+    "You are a helpful assistant. Format results clearly with headings, bullets, numbered lists. Cite as [Source X]."
+)
+
+WEBSEARCH_BASIC_PROMPT = load_prompt(
+    BASIC_PROMPT_PATH,
+    "Provide a concise answer (3-5 sentences) based only on the search results. Cite as [Source X]."
+)
 
 async def web_search(query: str, max_results: int = 5, search_depth: str="basic") -> List[Document]:
     """Perform Tavily web search and return results as LangChain Documents."""
@@ -66,6 +86,7 @@ async def run_web_search(state: GraphState) -> GraphState:
     """
     query = state.get("resolved_query") or state.get("user_query", "")
     is_web_search=state.get("web_search", False)
+    system_prompt = WEBSEARCH_PROMPT if is_web_search else WEBSEARCH_BASIC_PROMPT
 
     llm_model = state.get("llm_model", "gpt-4o")
     print(f"[WebSearch] Starting run_web_search for query: {query}")
@@ -89,20 +110,7 @@ async def run_web_search(state: GraphState) -> GraphState:
         return state
 
     print(f"[WebSearch] Loading prompt template...")
-    prompt_path = os.path.join(os.path.dirname(__file__), "websearch.md")
-    try:
-        with open(prompt_path, 'r', encoding='utf-8') as f:
-            system_prompt = f.read()
-        print(f"[WebSearch] Loaded prompt template from {prompt_path}")
-    except FileNotFoundError:
-        system_prompt = (
-            "You are a helpful assistant. Format the following search results "
-            "into a clear, structured answer with headings, bullet points, and numbered lists. "
-            "Always cite sources as [Source X]."
-        )
-        print(f"[WebSearch] Using fallback prompt template")
 
-    print(f"[WebSearch] Formatting sources text...")
     sources_text = "\n".join(
         [f"[Source {i+1}] {doc.metadata.get('title')} ({doc.metadata.get('url')})\n"
          f"{doc.page_content[:400]}"
@@ -123,14 +131,6 @@ Now synthesize them into a clear, structured answer with:
     print(f"[WebSearch] User prompt created, length: {len(user_prompt)}")
     print(f"[WebSearch] Calling LLM with model: {llm_model}")
     if not is_web_search:
-        # Load short/basic prompt
-        prompt_path = os.path.join(os.path.dirname(__file__), "websearch_basic.md")
-        try:
-            with open(prompt_path, 'r', encoding='utf-8') as f:
-                system_prompt = f.read()
-        except FileNotFoundError:
-            system_prompt = "Provide a concise answer (3-5 sentences) based only on the search results. Cite as [Source X]."
-
         llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
         answer = await llm.ainvoke([
             SystemMessage(content=system_prompt),

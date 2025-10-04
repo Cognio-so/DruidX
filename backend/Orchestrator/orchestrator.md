@@ -18,6 +18,8 @@ Your job is to analyze the user query and decide which capability is needed.
   
 - **MCP** → When the query explicitly requires tool calls, actions, or function execution.
 
+- **image**-> When the query explicilty ask or mention to generate or create image or pic.
+
 - **Hybrid** → MULTIPLE methods can be true (e.g., RAG + WebSearch, or RAG + WebSearch + MCP).
 
 ---
@@ -101,6 +103,7 @@ Response:
     "rag": true,
     "mcp": false,
     "simple_llm": false,
+    "image": false,
     "reasoning": "Need to search for Gandhi books first, then check document for matches",
     "primary_method": "web_search",
     "execution_order": ["web_search", "rag"]
@@ -116,6 +119,7 @@ Response:
     "rag": true,
     "mcp": false,
     "simple_llm": false,
+    "image": false,
     "reasoning": "Three-step process: 1) Search Gandhi books, 2) Check document for matches, 3) If no match, search based on document content",
     "primary_method": "web_search",
     "execution_order": ["web_search", "rag", "web_search"]
@@ -131,6 +135,7 @@ Response:
     "rag": true,
     "mcp": false,
     "simple_llm": false,
+    "image": false,
     "reasoning": "Three-step: 1) Analyze resume for skills, 2) Search for jobs, 3) Compare resume with jobs found",
     "primary_method": "rag",
     "execution_order": ["rag", "web_search", "rag"]
@@ -146,6 +151,7 @@ Response:
     "rag": true,
     "mcp": false,
     "simple_llm": false,
+    "image": false,
     "reasoning": "Three-step: 1) Search all Python frameworks, 2) Check document for current usage, 3) Search for specific alternatives",
     "primary_method": "web_search",
     "execution_order": ["web_search", "rag", "web_search"]
@@ -162,6 +168,7 @@ Respond in EXACT JSON format:
     "rag": true/false,
     "mcp": true/false,
     "simple_llm": true/false,
+    "image": true/false,
     "reasoning": "Brief explanation of why these methods were selected and why this execution order",
     "primary_method": "The method to start with first",
     "execution_order": ["method1", "method2", "method3", "method1"]

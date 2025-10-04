@@ -25,5 +25,7 @@ class GraphState(TypedDict, total=False):
     final_answer: Optional[str]
     task_index: Optional[int]
     resolved_query: Optional[str]
-    active_docs: Optional[Dict[str, Any]] 
-
+    active_docs: Optional[Dict[str, Any]]
+    
+    deep_research_state: Optional[Dict[str, Any]]  
+    deep_research_query: Optional[str]              

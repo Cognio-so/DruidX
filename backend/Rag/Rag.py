@@ -28,14 +28,19 @@ except Exception as e:
     QDRANT_CLIENT = QdrantClient(":memory:")
 
 VECTOR_SIZE = 1536
-
+import aiofiles
 # Load the base RAG prompt
 prompt_path = os.path.join(os.path.dirname(__file__), "Rag.md")
-try:
-    with open(prompt_path, 'r', encoding='utf-8') as f:
-        base_rag_prompt = f.read()
-except FileNotFoundError:
-    base_rag_prompt = "You are a Retrieval-Augmented Generation (RAG) assistant. Answer using only the provided context."
+def load_base_prompt() -> str:
+    path = os.path.join(os.path.dirname(__file__), "Rag.md")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return "You are a Retrieval-Augmented Generation (RAG) assistant. Answer using only the provided context."
+
+base_rag_prompt = load_base_prompt()
+
 BM25_INDICES = {}
 async def retreive_docs(doc: List[str], name: str, is_hybrid: bool= False):
     EMBEDDING_MODEL = OpenAIEmbeddings(model="text-embedding-3-small")
@@ -45,15 +50,17 @@ async def retreive_docs(doc: List[str], name: str, is_hybrid: bool= False):
     embeddings = await EMBEDDING_MODEL.aembed_documents([doc.page_content for doc in chunked_docs])
     
     # Instead of always recreating
-    collections = [c.name for c in QDRANT_CLIENT.get_collections().collections]
+    collections_response = await asyncio.to_thread(QDRANT_CLIENT.get_collections)
+    collections = [c.name for c in collections_response.collections]
     if name not in collections:
-        QDRANT_CLIENT.recreate_collection(
+        await asyncio.to_thread(
+            QDRANT_CLIENT.recreate_collection,
             collection_name=name,
             vectors_config=models.VectorParams(size=VECTOR_SIZE, distance=models.Distance.COSINE),
         )
 
-    
-    QDRANT_CLIENT.upsert(
+    await asyncio.to_thread(
+        QDRANT_CLIENT.upsert,
         collection_name=name,
         points=[
             models.PointStruct(
@@ -66,7 +73,7 @@ async def retreive_docs(doc: List[str], name: str, is_hybrid: bool= False):
     )
     if is_hybrid:
         tokenized_docs = [tokenize(doc.page_content) for doc in chunked_docs]
-        bm25 = BM25Okapi(tokenized_docs)
+        bm25 = await asyncio.to_thread(BM25Okapi, tokenized_docs)
         BM25_INDICES[name] = {
     "bm25": bm25,
     "docs": {str(i): doc.page_content for i, doc in enumerate(chunked_docs)},
@@ -86,9 +93,10 @@ async def _search_collection(collection_name: str, query: str, limit: int) -> Li
     """
    
     EMBEDDING_MODEL = OpenAIEmbeddings(model="text-embedding-3-small")
-    query_embedding = EMBEDDING_MODEL.embed_query(query)
+    query_embedding =await  EMBEDDING_MODEL.aembed_query(query)
     
-    search_results = QDRANT_CLIENT.search(
+    search_results = await asyncio.to_thread(
+    QDRANT_CLIENT.search,
         collection_name=collection_name,
         query_vector=query_embedding,
         limit=limit
@@ -121,6 +129,12 @@ async def _reciprocal_rank_fusion(rankings: List[List[str]], k: int = 60) -> Lis
             rrf_scores[doc] += 1 / (k + rank)
     sorted_docs = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
     return [doc for doc, score in sorted_docs]
+import asyncio
+
+async def _bm25_scores(bm25, tokenized_query):
+    """Run BM25 scoring in a thread to avoid blocking the async loop."""
+    return await asyncio.to_thread(bm25.get_scores, tokenized_query)
+
 async def _hybrid_search_rrf(collection_name: str, query: str, limit: int, k: int = 60) -> List[str]:
     """
     Hybrid RAG with RRF: Combines vector search (semantic) and BM25 (keyword) using RRF.
@@ -147,8 +161,9 @@ async def _hybrid_search_rrf(collection_name: str, query: str, limit: int, k: in
     """
     EMBEDDING_MODEL = OpenAIEmbeddings(model="text-embedding-3-small")
 
-    query_embedding = EMBEDDING_MODEL.embed_query(query)
-    vector_results = QDRANT_CLIENT.search(
+    query_embedding =await EMBEDDING_MODEL.aembed_query(query)
+    vector_results =await asyncio.to_thread(
+        QDRANT_CLIENT.search,
         collection_name=collection_name,
         query_vector=query_embedding,
         limit=limit * 3
@@ -164,7 +179,7 @@ async def _hybrid_search_rrf(collection_name: str, query: str, limit: int, k: in
     docs = bm25_data["docs"]
     
     tokenized_query = tokenize(query)
-    bm25_scores = bm25.get_scores(tokenized_query)
+    bm25_scores = await _bm25_scores(bm25, tokenized_query)
     scored_docs = [(score, docs[str(idx)]) for idx, score in enumerate(bm25_scores)]
 
     bm25_threshold = 0.1
@@ -188,8 +203,9 @@ async def _hybrid_search_intersection(collection_name: str, query: str, limit: i
     """
 
     EMBEDDING_MODEL = OpenAIEmbeddings(model="text-embedding-3-small")
-    query_embedding = EMBEDDING_MODEL.embed_query(query)
-    vector_results = QDRANT_CLIENT.search(
+    query_embedding =await EMBEDDING_MODEL.aembed_query(query)
+    vector_results =await asyncio.to_thread(
+        QDRANT_CLIENT.search,
         collection_name=collection_name,
         query_vector=query_embedding,
         limit=limit * 5
@@ -204,7 +220,7 @@ async def _hybrid_search_intersection(collection_name: str, query: str, limit: i
     docs = bm25_data["docs"]
 
     tokenized_query = tokenize(query)
-    bm25_scores = bm25.get_scores(tokenized_query)
+    bm25_scores = await _bm25_scores(bm25, tokenized_query)
     bm25_ranked = [docs[str(idx)] for idx in sorted(
         range(len(bm25_scores)), key=lambda x: bm25_scores[x], reverse=True
     )[:limit * 5]]

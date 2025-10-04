@@ -275,7 +275,6 @@ async def chat(session_id: str, request: ChatRequest):
         print(f"Uploaded docs count: {len(uploaded_docs_content)}")
         print(f"KB docs count: {len(kb_docs_content)}")
         
-        # Create graph state - FIX: Use dictionary access, not attribute access
         state = GraphState(
             user_query=request.message,
             llm_model=llm_model,
@@ -283,13 +282,13 @@ async def chat(session_id: str, request: ChatRequest):
             doc=uploaded_docs_content,
             gpt_config=gpt_config,
             kb={"text": kb_docs_content} if kb_docs_content else None,
-            web_search=request.web_search,  # Use the web search toggle from request
-            rag=request.rag,  # Use the RAG toggle from request
-            deep_search=request.deep_search,  # Use the deep search toggle from request
-            uploaded_doc=request.uploaded_doc  # Use the uploaded doc indicator from request
+            web_search=request.web_search,  
+            rag=request.rag, 
+            deep_search=request.deep_search,  
+            uploaded_doc=request.uploaded_doc  
         )
         
-        print(f"Created graph state with {len(state['messages'])} messages")  # FIX: Use dict access
+        print(f"Created graph state with {len(state['messages'])} messages") 
         print(f"Web search enabled in state: {state.get('web_search')}")
         print(f"RAG enabled in state: {state.get('rag')}")
         print(f"Deep search enabled in state: {state.get('deep_search')}")

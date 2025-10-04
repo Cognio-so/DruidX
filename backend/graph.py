@@ -5,6 +5,7 @@ from Orchestrator.Orchestrator import orchestrator, route_decision
 from Basic_llm.basic_llm import SimpleLLm
 from Rag.Rag import Rag
 from WebSearch.websearch import run_web_search
+from Image.image import generate_image
 from DeepResearch import (
     initialize_deep_research,
     plan_research_node,
@@ -20,7 +21,7 @@ def create_graph():
     g.add_node("SimpleLLM", trace_node(SimpleLLm, "SimpleLLM"))
     g.add_node("RAG", trace_node(Rag, "RAG"))
     g.add_node("WebSearch", trace_node(run_web_search, "WebSearch"))
-
+    g.add_node("image", trace_node(generate_image, "image"))
     g.add_node("initialize_deep_research", trace_node(initialize_deep_research, "initialize_deep_research"))
     g.add_node("plan_research", trace_node(plan_research_node, "plan_research"))
     g.add_node("execute_research", trace_node(execute_research_node, "execute_research"))
@@ -34,6 +35,7 @@ def create_graph():
             "RAG": "RAG",
             "SimpleLLM": "SimpleLLM",
             "WebSearch": "WebSearch",
+            "image": "image",
             "deepResearch": "initialize_deep_research",
             "END": END
         })
@@ -41,6 +43,7 @@ def create_graph():
     g.add_edge("SimpleLLM", "orchestrator")
     g.add_edge("RAG", "orchestrator")
     g.add_edge("WebSearch", "orchestrator")
+    g.add_edge("image", "orchestrator")
     
     g.add_edge("initialize_deep_research", "plan_research")
 

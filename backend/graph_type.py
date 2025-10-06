@@ -10,7 +10,8 @@ class GraphState(TypedDict, total=False):
     doc: Optional[List[str]]
     deep_search: Optional[bool]
     mcp: Optional[bool]
-    mcp_schema: Optional[Dict[str, Any]]
+    mcp_schema: Optional[List[Dict[str, Any]]]
+    mcp_tools:Optional[List[Any]]
     web_search: Optional[bool]
     rag: Optional[bool]  # hybrid rag only
     uploaded_doc: Optional[bool]  # uploaded document indicator

@@ -6,6 +6,7 @@ from Basic_llm.basic_llm import SimpleLLm
 from Rag.Rag import Rag
 from WebSearch.websearch import run_web_search
 from Image.image import generate_image
+from MCP.mcp_node import run_mcp_stdio
 from DeepResearch import (
     initialize_deep_research,
     plan_research_node,
@@ -27,7 +28,7 @@ def create_graph():
     g.add_node("execute_research", trace_node(execute_research_node, "execute_research"))
     g.add_node("analyze_gaps", trace_node(analyze_gaps_node, "analyze_gaps"))
     g.add_node("synthesize_report", trace_node(synthesize_report_node, "synthesize_report"))
-    
+    g.add_node("mcp", trace_node(run_mcp_stdio,"mcp"))
     g.set_entry_point("orchestrator")
     
     g.add_conditional_edges("orchestrator",
@@ -36,6 +37,7 @@ def create_graph():
             "SimpleLLM": "SimpleLLM",
             "WebSearch": "WebSearch",
             "image": "image",
+            "mcp":"mcp",
             "deepResearch": "initialize_deep_research",
             "END": END
         })
@@ -44,7 +46,7 @@ def create_graph():
     g.add_edge("RAG", "orchestrator")
     g.add_edge("WebSearch", "orchestrator")
     g.add_edge("image", "orchestrator")
-    
+    g.add_edge("mcp", "orchestrator")
     g.add_edge("initialize_deep_research", "plan_research")
 
     g.add_conditional_edges("plan_research",

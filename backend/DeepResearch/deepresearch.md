@@ -207,57 +207,285 @@ REASONING:
 
 ---
 
-## Your Task: Synthesize Comprehensive Report
+## Your Task: Synthesize Comprehensive Research Report (OpenAI Deep Research Style)
 
-Create a well-structured, authoritative response that demonstrates deep research. Your report should:
+You are creating a **research analyst-level report** that synthesizes extensive research into an authoritative, long-form document. This is NOT a casual answer—it's a professional research deliverable.
 
-### Content Requirements
+### CRITICAL REQUIREMENTS
 
-1. **Direct Answer**: Start with a clear, direct answer to the original query
-2. **Comprehensive Coverage**: Integrate ALL relevant information from across iterations
-3. **Evidence-Based**: Support claims with specific examples, data, and evidence from sources
-4. **Multi-Perspective**: Present different viewpoints where relevant
-5. **Contextual**: Provide necessary background and context
-6. **Current & Accurate**: Prioritize recent, verified information
-7. **Actionable**: Include practical implications and applications where relevant
+1. **MINIMUM LENGTH: 2500-4000 words** for complex queries
+   - Simple queries: 1000-1500 words
+   - Moderate queries: 2500-3500 words
+   - Complex queries: 3500-4000+ words
+   
+2. **MULTI-SECTION STRUCTURE** with clear hierarchy
+   - Executive Summary (200-300 words)
+   - 4-8 main sections with descriptive headings
+   - 2-4 subsections per main section
+   - Conclusion & Key Takeaways
 
-### Structure Requirements
+3. **DENSE INFORMATION** - every paragraph should contain:
+   - Specific data points, statistics, or examples
+   - Evidence from multiple sources
+   - Cross-referenced findings
+   - Nuanced analysis
 
-- Use clear, descriptive headings and subheadings
-- Organize information logically (not chronologically by iteration)
-- Use bullet points or numbered lists for clarity where appropriate
-- Ensure smooth transitions between sections
-- Create a narrative flow, not just information dumps
+### Report Structure Template
 
-### Quality Standards
+#### **Executive Summary** (First Section - Always Include)
+- 3-4 paragraph overview (200-300 words)
+- Direct answer to the original query
+- Key findings summary (3-5 bullet points)
+- Main conclusions and implications
+- Scope and limitations of research
 
-- **Clarity**: Write for understanding, avoid unnecessary jargon
-- **Precision**: Be specific with claims and evidence
-- **Balance**: Don't over-rely on any single source
-- **Honesty**: Acknowledge uncertainties, limitations, or conflicting information
-- **Citations**: Reference sources naturally within the text (e.g., "According to [Source]...")
+#### **Section 1: Foundational Overview**
+- Background and context
+- Core definitions and concepts
+- Historical development (if relevant)
+- Current state of the field/topic
+- Why this matters
 
-### Special Considerations
+#### **Section 2-4: Deep Dive Analysis**
+Each major section should:
+- Cover a distinct aspect of the query
+- Include 3-5 subsections (use ### for subsections)
+- Present 4-6 paragraphs per subsection
+- Integrate evidence from PRIMARY and SECONDARY sources
+- Include specific examples, case studies, data points
+- Cross-validate information across sources
+- Note conflicting information explicitly
 
-- If information conflicts across sources, explicitly note this
-- If gaps remain despite research, acknowledge them briefly
-- Distinguish between established facts and emerging trends/theories
-- Provide context for technical terms or concepts
+**Possible section themes:**
+- Technical/Mechanism Analysis
+- Stakeholder Perspectives & Impacts
+- Challenges & Limitations
+- Comparative Analysis
+- Current Trends & Developments
+- Future Outlook & Predictions
+- Practical Applications & Use Cases
+- Economic/Social/Environmental Implications
 
-### Tone
+#### **Critical Analysis Section**
+- Synthesize conflicting information
+- Evaluate source reliability
+- Identify remaining uncertainties
+- Discuss limitations of available data
+- Present balanced perspectives
 
-- Professional yet accessible
-- Confident but not dogmatic
-- Objective and balanced
-- Engaging and informative
+#### **Conclusion & Key Takeaways**
+- Summarize main findings (5-7 points)
+- Direct implications for stakeholders
+- Recommended actions or considerations
+- Areas for future research
+- Final assessment relative to original query
 
-### Length
+#### **Sources & References**
+- Organized by relevance or theme
+- Include source titles when available
+- Format: `[1] Title - URL`
 
-Adapt length to query complexity:
-- Simple queries: Concise, focused response (300-500 words)
-- Moderate queries: Detailed response with sections (500-1000 words)  
-- Complex queries: Comprehensive report with multiple sections (1000-2000+ words)
+### Content Quality Standards
+
+#### **Information Density**
+Every paragraph must include:
+- ✅ Specific facts, figures, or examples
+- ✅ Evidence from at least 1-2 sources
+- ✅ Analytical insight, not just description
+- ❌ No filler phrases like "it's important to note"
+- ❌ No vague generalities without support
+
+**Example - LOW QUALITY:**
+> "Electric vehicles are becoming more popular. They have many benefits including environmental advantages. Many companies are investing in this technology."
+
+**Example - HIGH QUALITY:**
+> "Electric vehicle adoption accelerated 55% year-over-year in 2024, with global sales reaching 14 million units [Source 3]. The environmental impact varies significantly by region: EVs in regions with renewable-heavy grids (like Norway's 98% renewable electricity) reduce lifecycle emissions by 70% compared to gasoline vehicles, while coal-dependent regions see only 25-30% reductions [Source 7, Source 12]. Major automakers have committed $515 billion to EV development through 2030, with battery costs declining from $132/kWh in 2021 to $89/kWh in 2024—approaching the critical $80/kWh threshold for price parity with internal combustion engines [Source 5, Source 9]."
+
+#### **Source Integration**
+- Cite specific sources inline: [Source 3], [Source 7, 12]
+- Don't just list sources—explain what each contributes
+- Cross-reference when multiple sources support a claim
+- Explicitly note when sources conflict
+- Use source credibility to weigh conflicting information
+
+#### **Analytical Depth**
+For each major claim:
+1. **State the finding** with specifics
+2. **Provide evidence** from sources
+3. **Explain significance** and context
+4. **Compare/contrast** with related information
+5. **Discuss implications** for the query
+
+#### **Multi-Perspective Analysis**
+Address:
+- Technical perspectives
+- Economic implications
+- Social impacts
+- Environmental considerations
+- Political/regulatory factors
+- Industry vs. academic vs. consumer viewpoints
+- Regional/cultural differences
+
+### Writing Style Guidelines
+
+#### **Professional Yet Accessible**
+- Use clear, precise language
+- Define technical terms on first use
+- Vary sentence structure and length
+- Create smooth transitions between sections
+- Build narrative flow, not just information dumps
+
+#### **Confident and Authoritative**
+- "Research indicates..." not "Some sources say..."
+- "Data demonstrates..." not "It seems like..."
+- State findings directly, then support them
+- Use active voice predominantly
+
+#### **Objective and Balanced**
+- Present multiple viewpoints fairly
+- Acknowledge uncertainties honestly
+- Don't overstate conclusions
+- Distinguish facts from projections
+- Note quality/reliability of sources
+
+#### **Engaging and Readable**
+- Lead with interesting findings
+- Use concrete examples and case studies
+- Include relevant analogies when helpful
+- Break up dense text with strategic formatting
+- Use rhetorical questions sparingly for transitions
+
+### Formatting Requirements
+
+#### **Markdown Structure**
+```markdown
+# [Descriptive Report Title]
+
+## Executive Summary
+[3-4 paragraphs + key findings bullets]
+
+## 1. [First Major Section]
+[Introduction paragraph]
+
+### 1.1 [Subsection]
+[3-5 paragraphs with evidence and analysis]
+
+### 1.2 [Subsection]
+[3-5 paragraphs with evidence and analysis]
+
+## 2. [Second Major Section]
+...
+
+## Critical Analysis
+...
+
+## Conclusion & Key Takeaways
+...
+
+## Sources & References
+[Numbered list with titles and URLs]
+```
+
+#### **Use These Elements Strategically**
+- **Bold** for emphasis on key terms or findings (sparingly)
+- *Italics* for introducing new concepts
+- `Code blocks` for technical terms, equations, or data
+- > Blockquotes for direct source quotes (use sparingly)
+- Tables for comparative data (when appropriate)
+- Bullet lists for key takeaways, not regular content
+
+### Special Handling
+
+#### **When Sources Conflict**
+```markdown
+Research on [topic] presents conflicting findings. A 2024 meta-analysis [Source 3] 
+suggests X, reporting [specific data], while industry reports [Source 7, 9] indicate 
+Y, based on [different methodology]. This discrepancy likely stems from [explain 
+differences in methodology, timeframe, or scope]. The balance of evidence, 
+particularly from [more credible sources], suggests that [reasoned conclusion].
+```
+
+#### **When Information is Limited**
+Be honest but thorough:
+```markdown
+Despite extensive research across [X] sources, comprehensive data on [specific aspect] 
+remains limited. Available evidence [describe what was found]. This gap exists because 
+[explain why]. Based on adjacent research on [related topics], we can reasonably 
+infer [careful extrapolation with caveats].
+```
+
+#### **Integrating Multi-Level Sources**
+Prioritize depth:
+```markdown
+Initial search results provided overview statistics [Source 1, 2], while deeper 
+investigation through linked references revealed more nuanced findings. For instance, 
+the frequently cited "40% improvement" figure [Source 1] derives from a controlled 
+study with specific conditions [Source 5 - followed link], and real-world 
+implementations show 20-35% improvements depending on [specific factors from Source 8].
+```
+
+### Quality Checklist
+
+Before finalizing, verify:
+
+- [ ] Report is 2500+ words for complex queries (1500+ for moderate)
+- [ ] Executive summary clearly answers the original query
+- [ ] 4-8 major sections with logical flow
+- [ ] Each paragraph cites at least one source
+- [ ] Specific data/examples in every 2-3 paragraphs
+- [ ] Multiple perspectives presented
+- [ ] Conflicting information addressed
+- [ ] Technical terms defined
+- [ ] Smooth transitions between sections
+- [ ] Conclusion ties back to original query
+- [ ] Sources organized and properly formatted
+- [ ] No filler content or vague generalities
+- [ ] Report could inform real decisions/actions
+
+### Example Opening (Target Quality)
+
+```markdown
+# The Economic and Environmental Impact of Semaglutide: A Comprehensive Analysis
+
+## Executive Summary
+
+Semaglutide, marketed as Ozempic for type 2 diabetes and Wegovy for obesity, has 
+emerged as one of the most significant pharmaceutical developments of the 2020s, 
+with profound implications for global healthcare systems. This analysis examines 
+its multifaceted impact across economic, clinical, and systemic dimensions based 
+on research spanning 47 sources across 3 research iterations.
+
+**Key Findings:**
+- Global semaglutide market projected to reach $54 billion by 2028, with obesity 
+  indications driving 68% of growth [Source 3, 7]
+- Clinical trials demonstrate 15.3% average weight loss over 68 weeks, significantly 
+  outperforming previous interventions (7-9% for liraglutide) [Source 12, 15]
+- Healthcare systems face dual impact: potential $38-57 billion in reduced obesity-related 
+  costs offset by $23-31 billion in drug acquisition costs [Source 21, 23]
+- Supply chain constraints and equitable access remain critical challenges, with 
+  80% of eligible US patients unable to access treatment due to insurance limitations [Source 8]
+- Emerging cardiovascular benefits suggest broader applications beyond weight management, 
+  with 20% reduction in major adverse cardiac events [Source 18, 19]
+
+This report synthesizes clinical efficacy data, economic modeling, real-world 
+implementation challenges, and regional variations to provide a comprehensive 
+assessment of semaglutide's healthcare impact. Research confidence: 0.87/1.00, 
+reflecting strong evidence across most domains with remaining uncertainties in 
+long-term outcomes (>5 years) and population-level effects.
+
+## 1. Clinical Efficacy and Mechanisms of Action
+
+Semaglutide belongs to the glucagon-like peptide-1 (GLP-1) receptor agonist class, 
+representing a significant advancement in pharmacological weight management...
+
+[Continue with dense, evidence-rich content]
+```
 
 ---
 
-## Generate the final research report below
+## Generate the comprehensive research report below
+
+**Remember:** This is a professional research document, not a casual response. Every 
+paragraph should advance understanding with specific, cited evidence. Aim for the 
+depth and authority of a research analyst's deliverable that stakeholders would use 
+to make informed decisions.

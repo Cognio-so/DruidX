@@ -20,8 +20,8 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "Shannon Gpt",
-  description: "AI powerful Gpt ",
+  title: "EMSA Gpt",
+  description: "AI powerful Gpt for EMSA",
 };
 
 export default function RootLayout({

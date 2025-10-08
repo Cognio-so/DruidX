@@ -27,7 +27,6 @@ export default function TeamsPageClient({ teamMembers }: TeamsPageClientProps) {
         roleFilter={roleFilter}
         onSearchChange={setSearchTerm}
         onRoleFilterChange={setRoleFilter}
-        onStatusFilterChange={setStatusFilter}
         onClearFilters={handleClearFilters}
       />
       

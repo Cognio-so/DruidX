@@ -88,8 +88,8 @@ export default function ChatMessage({
               ))}
             </div>
           )}
-          <div className="text-sm whitespace-pre-wrap">
-            {message}
+          <div className="text-sm">
+            <Markdown content={message} />
             {isStreaming && (
               <span className="inline-block animate-pulse ml-1">⚪</span>
             )}

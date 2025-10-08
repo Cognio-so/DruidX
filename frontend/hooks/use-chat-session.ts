@@ -22,19 +22,26 @@ export function useChatSession(): ChatSessionHook {
 
   // Create session
   const createSession = useCallback(async (): Promise<string> => {
-    const response = await fetch('/api/sessions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to create session');
+    try {
+      const response = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Session creation failed:', response.status, errorText);
+        throw new Error(`Failed to create session: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data.session_id;
+    } catch (error) {
+      console.error('Session creation error:', error);
+      throw error;
     }
-    
-    const data = await response.json();
-    return data.session_id;
   }, []);
 
   // Load GPT configuration and knowledge base
@@ -44,6 +51,8 @@ export function useChatSession(): ChatSessionHook {
       const gptResponse = await fetch(`/api/gpts/${gptId}`);
       if (!gptResponse.ok) {
         console.error('❌ Failed to fetch GPT configuration:', gptResponse.status);
+        const errorText = await gptResponse.text();
+        console.error('Error details:', errorText);
         return;
       }
       
@@ -73,19 +82,30 @@ export function useChatSession(): ChatSessionHook {
       };
 
       console.log('📤 Sending GPT config to backend:', gptConfig);
-      // Set GPT config in session
-      const configResponse = await fetch(`http://localhost:8000/api/sessions/${sessionId}/gpt-config`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(gptConfig),
-      });
       
-      if (!configResponse.ok) {
-        console.error('❌ Failed to send GPT config to backend:', configResponse.status);
-      } else {
-        console.log('✅ GPT config sent to backend successfully');
+      // Check if backend is available
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+      
+      try {
+        // Set GPT config in session
+        const configResponse = await fetch(`${backendUrl}/api/sessions/${sessionId}/gpt-config`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(gptConfig),
+        });
+        
+        if (!configResponse.ok) {
+          console.error('❌ Failed to send GPT config to backend:', configResponse.status);
+          const errorText = await configResponse.text();
+          console.error('Backend error details:', errorText);
+        } else {
+          console.log('✅ GPT config sent to backend successfully');
+        }
+      } catch (backendError) {
+        console.error('❌ Backend connection failed:', backendError);
+        // Don't throw here, just log the error and continue
       }
       
       // Load knowledge base documents if they exist
@@ -106,23 +126,28 @@ export function useChatSession(): ChatSessionHook {
         
         console.log('📤 Sending KB documents to backend:', documentsPayload);
         
-        // Send KB documents to backend
-        const kbResponse = await fetch(`http://localhost:8000/api/sessions/${sessionId}/add-documents`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(documentsPayload),
-        });
-        
-        if (!kbResponse.ok) {
-          console.error('❌ Failed to send KB documents to backend:', kbResponse.status);
-          const errorText = await kbResponse.text();
-          console.error('Error details:', errorText);
-        } else {
-          console.log('✅ KB documents sent to backend successfully');
-          const responseData = await kbResponse.json();
-          console.log('Backend response:', responseData);
+        try {
+          // Send KB documents to backend
+          const kbResponse = await fetch(`${backendUrl}/api/sessions/${sessionId}/add-documents`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(documentsPayload),
+          });
+          
+          if (!kbResponse.ok) {
+            console.error('❌ Failed to send KB documents to backend:', kbResponse.status);
+            const errorText = await kbResponse.text();
+            console.error('Error details:', errorText);
+          } else {
+            console.log('✅ KB documents sent to backend successfully');
+            const responseData = await kbResponse.json();
+            console.log('Backend response:', responseData);
+          }
+        } catch (backendError) {
+          console.error('❌ Backend connection failed for KB documents:', backendError);
+          // Don't throw here, just log the error and continue
         }
       } else {
         console.log('ℹ️ No knowledge base configured for this GPT');
@@ -140,8 +165,10 @@ export function useChatSession(): ChatSessionHook {
 
     try {
       console.log('📤 Uploading user document:', { fileUrl, filename });
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+      
       // Send user document to backend
-      const response = await fetch(`http://localhost:8000/api/sessions/${sessionId}/add-documents`, {
+      const response = await fetch(`${backendUrl}/api/sessions/${sessionId}/add-documents`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -49,3 +49,37 @@ export const gptSchema = z.object({
 });
 
 export type GptFormValues = z.infer<typeof gptSchema>;
+
+// Team member validation schemas
+export const teamMemberUpdateSchema = z.object({
+  name: z
+    .string()
+    .min(2, { message: "Name must be at least 2 characters long" })
+    .max(100, { message: "Name must not exceed 100 characters" }),
+  email: z
+    .string()
+    .email({ message: "Please enter a valid email address" })
+    .max(255, { message: "Email must not exceed 255 characters" }),
+  role: z
+    .enum(["admin", "user"], { message: "Role must be either admin or user" }),
+});
+
+export const teamMemberInviteSchema = z.object({
+  name: z
+    .string()
+    .min(2, { message: "Name must be at least 2 characters long" })
+    .max(100, { message: "Name must not exceed 100 characters" }),
+  email: z
+    .string()
+    .email({ message: "Please enter a valid email address" })
+    .max(255, { message: "Email must not exceed 255 characters" }),
+  role: z
+    .enum(["admin", "user"], { message: "Role must be either admin or user" }),
+  message: z
+    .string()
+    .max(500, { message: "Message must not exceed 500 characters" })
+    .optional(),
+});
+
+export type TeamMemberUpdateValues = z.infer<typeof teamMemberUpdateSchema>;
+export type TeamMemberInviteValues = z.infer<typeof teamMemberInviteSchema>;

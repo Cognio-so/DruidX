@@ -62,7 +62,7 @@ export function GptCard({ gpt }: GptCardProps) {
 
             {/* Name and Status */}
             <div>
-              <CardTitle className="text-lg font-semibold">
+              <CardTitle className="text-xl font-semibold">
                 {gpt.name}
               </CardTitle>
             </div>
@@ -76,12 +76,6 @@ export function GptCard({ gpt }: GptCardProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem asChild>
-                <Link href={`/admin/gpts/${gpt.id}/chat`}>
-                  <MessageCircle className="size-4 mr-2" />
-                  Chat
-                </Link>
-              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={`/admin/gpts/${gpt.id}/edit`}>
                   <Pencil className="size-4 mr-2" />
@@ -105,10 +99,6 @@ export function GptCard({ gpt }: GptCardProps) {
 
         <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-1">
-              <MessageCircle className="w-4 h-4 text-yellow-600" />
-              <span>0</span>
-            </div>
             <div className="flex items-center space-x-1">
               <Calendar className="w-4 h-4 text-blue-600" />
               <span>{new Date(gpt.createdAt).toLocaleDateString("en-GB")}</span>

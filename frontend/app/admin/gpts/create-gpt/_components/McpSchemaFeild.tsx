@@ -9,9 +9,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
+import { GptFormValues } from "@/lib/zodSchema";
 
 interface McpSchemaFieldProps {
-  control: Control<Record<string, unknown>>;
+  control: Control<GptFormValues>;
 }
 
 export default function McpSchemaField({ control }: McpSchemaFieldProps) {
@@ -22,7 +23,7 @@ export default function McpSchemaField({ control }: McpSchemaFieldProps) {
       render={({
         field,
       }: {
-        field: ControllerRenderProps<Record<string, unknown>, "mcpSchema">;
+        field: ControllerRenderProps<GptFormValues, "mcpSchema">;
       }) => (
         <FormItem>
           <FormLabel>MCP Input Schema *</FormLabel>

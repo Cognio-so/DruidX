@@ -1,6 +1,6 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Form
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import asyncio
@@ -8,16 +8,16 @@ import os
 import uuid
 from datetime import datetime
 import json
-
+import httpx
+from document_processor import extract_text_from_pdf, extract_text_from_docx, extract_text_from_txt, extract_text_from_json
 from graph import graph
 from graph_type import GraphState
-from document_processor import process_uploaded_files_api, process_knowledge_base_files
+from streaming_graph import StreamingGraph
 from models import (
     ChatMessage, ChatRequest, ChatResponse, 
     GPTConfig, GPTResponse, DocumentResponse,
-    SessionInfo
+    SessionInfo, DocumentInfo
 )
-from storage import CloudflareR2Storage
 
 # Load environment variables
 try:
@@ -35,24 +35,17 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # React dev servers
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# In-memory storage for sessions (in production, use a database)
+# In-memory storage for sessions
 sessions: Dict[str, Dict[str, Any]] = {}
 
-# Add global variable
-storage = None
-
-# Initialize storage
-@app.on_event("startup")
-async def startup_event():
-    global storage
-    storage = CloudflareR2Storage()
-    print(f"Storage initialized: {not storage.use_local_fallback}")
+# Initialize streaming graph
+streaming_graph = StreamingGraph()
 
 class SessionManager:
     @staticmethod
@@ -81,6 +74,46 @@ class SessionManager:
             raise HTTPException(status_code=404, detail="Session not found")
         sessions[session_id].update(updates)
 
+async def fetch_document_content(url: str) -> str:
+    """Fetch document content from URL"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, timeout=30.0)
+            response.raise_for_status()
+            return response.text
+    except Exception as e:
+        print(f"Error fetching document from {url}: {e}")
+        return ""
+
+async def process_documents_from_urls(documents: List[DocumentInfo]) -> List[Dict[str, Any]]:
+    """Process documents by fetching content from URLs"""
+    processed_docs = []
+    
+    for doc in documents:
+        try:
+            print(f"Fetching document: {doc.filename} from {doc.file_url}")
+            content = await fetch_document_content(doc.file_url)
+            
+            if content:
+                processed_doc = {
+                    "id": doc.id,
+                    "filename": doc.filename,
+                    "content": content,
+                    "file_type": doc.file_type,
+                    "file_url": doc.file_url,
+                    "size": doc.size,
+                    "doc_type": doc.doc_type
+                }
+                processed_docs.append(processed_doc)
+                print(f"Successfully processed {doc.filename} ({len(content)} chars)")
+            else:
+                print(f"Failed to fetch content for {doc.filename}")
+                
+        except Exception as e:
+            print(f"Error processing document {doc.filename}: {e}")
+    
+    return processed_docs
+
 @app.get("/")
 async def root():
     return {"message": "DruidX AI Assistant API", "version": "1.0.0"}
@@ -96,126 +129,89 @@ async def get_session(session_id: str):
     """Get session information"""
     return SessionManager.get_session(session_id)
 
-@app.post("/api/sessions/{session_id}/load-kb")
-async def load_kb_documents(session_id: str):
-    """Load KB documents from storage for a session"""
-    session = SessionManager.get_session(session_id)
-    
-    if not storage:
-        return {"message": "Storage not available"}
-    
-    try:
-        # Get GPT config to find KB documents
-        gpt_config = session.get("gpt_config", {})
-        if not gpt_config:
-            return {"message": "No GPT config found"}
-        
-        # For now, we'll store KB documents in the session when uploaded
-        # In the future, you can load them from storage using the file URLs
-        kb_count = len(session.get("kb", []))
-        
-        return {
-            "message": f"Loaded {kb_count} KB documents",
-            "kb_documents": session.get("kb", [])
-        }
-        
-    except Exception as e:
-        print(f"Error loading KB documents: {e}")
-        return {"message": f"Error loading KB documents: {str(e)}"}
-
 @app.post("/api/sessions/{session_id}/gpt-config")
-async def set_gpt_config(session_id: str, config: GPTConfig):
+async def set_gpt_config(session_id: str, gpt_config: dict):
     """Set GPT configuration for a session"""
     session = SessionManager.get_session(session_id)
-    
-    # Store the config
-    session["gpt_config"] = config.dict()
-    
-    # Ensure KB documents are persisted
-    if storage and session.get("kb"):
-        print(f"Ensuring {len(session['kb'])} KB documents are persisted")
-        for doc in session["kb"]:
-            if hasattr(doc, 'file_url') and doc.file_url:
-                print(f"KB doc {doc.filename} already stored at: {doc.file_url}")
-            else:
-                print(f"KB doc {doc.filename} needs to be stored")
-    
+    session["gpt_config"] = gpt_config
     SessionManager.update_session(session_id, session)
-    return {"message": "GPT configuration updated successfully"}
+    return {"message": "GPT configuration updated", "gpt_config": gpt_config}
 
-@app.post("/api/sessions/{session_id}/upload-documents")
-async def upload_documents(
-    session_id: str, 
-    files: List[UploadFile] = File(...),
-    doc_type: str = Form(...)  # Remove default value, make it required
-):
-    """Upload documents to a session"""
-    print(f"=== UPLOAD ENDPOINT CALLED ===")
+@app.post("/api/sessions/{session_id}/add-documents")
+async def add_documents_by_url(session_id: str, request: dict):
+    """Add documents by URL"""
+    print(f"=== ADD DOCUMENTS ENDPOINT CALLED ===")
     print(f"Session ID: {session_id}")
-    print(f"Doc type: {doc_type}")
-    print(f"Number of files: {len(files)}")
-    print(f"File names: {[f.filename for f in files]}")
+    print(f"Request: {request}")
     
     session = SessionManager.get_session(session_id)
-    print(f"Session found: {bool(session)}")
-    print(f"Current KB docs count: {len(session.get('kb', []))}")
     
-    # Process uploaded files based on type
+    documents = request.get("documents", [])
+    doc_type = request.get("doc_type", "user")
+    
+    print(f"Documents to process: {len(documents)}")
+    print(f"Document type: {doc_type}")
+    
+    processed_docs = []
+    for i, doc in enumerate(documents):
+        print(f"Processing document {i+1}: {doc}")
+        file_url = doc["file_url"]
+        file_type = doc.get("file_type", "")
+        filename = doc["filename"]
+    
+        print(f"Fetching content from URL: {file_url}")
+        print(f"File type: {file_type}")
+        # Fetch content from URL
+        try:
+            async with httpx.AsyncClient() as client:
+                print(f"Fetching content from URL: {doc['file_url']}")
+                response = await client.get(doc["file_url"], timeout=30.0)
+                response.raise_for_status()
+                file_content = response.content
+                print(f"Downloaded {len(file_content)} bytes")
+        
+                if file_type == "application/pdf" or filename.lower().endswith('.pdf'):
+                    print(f"[Document Processor] Processing PDF: {filename}")
+                    content = extract_text_from_pdf(file_content)
+                elif file_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document" or filename.lower().endswith('.docx'):
+                    print(f"[Document Processor] Processing DOCX: {filename}")
+                    content = extract_text_from_docx(file_content)
+                elif file_type == "application/json" or filename.lower().endswith('.json'):
+                    print(f"[Document Processor] Processing JSON: {filename}")
+                    content = extract_text_from_json(file_content)
+                else:
+                    print(f"[Document Processor] Processing as text: {filename}")
+                    content = extract_text_from_txt(file_content)
+                
+                processed_doc = {
+                    "id": doc["id"],
+                    "filename": doc["filename"],
+                    "content": content,
+                    "file_type": doc["file_type"],
+                    "file_url": doc["file_url"],
+                    "size": doc["size"]
+                }
+                processed_docs.append(processed_doc)
+                print(f"✅ Successfully processed document: {doc['filename']}")
+        except Exception as e:
+            print(f"❌ Error fetching {doc['filename']}: {e}")
+    
+    print(f"Total processed documents: {len(processed_docs)}")
+    
+    # Add to session
     if doc_type == "user":
-        processed_docs = await process_uploaded_files_api(files)
         session["uploaded_docs"].extend(processed_docs)
-        session["new_uploaded_docs"] = processed_docs  # Add this line
-        print(f"Added {len(processed_docs)} user docs. Total user docs: {len(session['uploaded_docs'])}")
-        
-        # Store in Cloudflare R2 for persistence
-        if storage:
-            for doc in processed_docs:
-                try:
-                    success, url_or_key = storage.upload_file(
-                        file_data=doc.content.encode('utf-8'),
-                        filename=doc.filename,
-                        is_user_doc=True,
-                        schedule_deletion_hours=72
-                    )
-                    if success:
-                        doc.file_url = url_or_key
-                        print(f"Stored user doc in R2: {doc.filename}")
-                except Exception as e:
-                    print(f"Error storing user doc in R2: {e}")
-        
+        session["new_uploaded_docs"] = processed_docs
+        print(f"Added {len(processed_docs)} documents to uploaded_docs")
     elif doc_type == "kb":
-        processed_docs = await process_knowledge_base_files(files)
         session["kb"].extend(processed_docs)
-        session["new_uploaded_docs"] = processed_docs  # Add this line
-        print(f"Added {len(processed_docs)} KB docs. Total KB docs: {len(session['kb'])}")
-        print(f"KB docs content preview: {[doc.content[:50] + '...' if hasattr(doc, 'content') else str(doc)[:50] + '...' for doc in processed_docs]}")
-        
-        # Store in Cloudflare R2 for persistence
-        if storage:
-            for doc in processed_docs:
-                try:
-                    success, url_or_key = storage.upload_file(
-                        file_data=doc.content.encode('utf-8'),
-                        filename=doc.filename,
-                        is_user_doc=False,
-                        schedule_deletion_hours=72
-                    )
-                    if success:
-                        doc.file_url = url_or_key
-                        print(f"Stored KB doc in R2: {doc.filename}")
-                except Exception as e:
-                    print(f"Error storing KB doc in R2: {e}")
-        
-    else:
-        raise HTTPException(status_code=400, detail="Invalid doc_type. Use 'user' or 'kb'")
+        print(f"Added {len(processed_docs)} documents to kb")
     
     SessionManager.update_session(session_id, session)
-    print(f"Session updated. Final KB docs count: {len(session['kb'])}")
     
-    return DocumentResponse(
-        message=f"Successfully uploaded {len(processed_docs)} documents",
-        documents=processed_docs
-    )
+    print(f"Session KB docs count after update: {len(session.get('kb', []))}")
+    
+    return {"message": f"Added {len(processed_docs)} documents", "documents": processed_docs}
 
 @app.get("/api/sessions/{session_id}/documents")
 async def get_documents(session_id: str):
@@ -226,73 +222,75 @@ async def get_documents(session_id: str):
         "kb": session["kb"]
     }
 
-@app.post("/api/sessions/{session_id}/chat", response_model=ChatResponse)
-async def chat(session_id: str, request: ChatRequest):
-    """Process a chat message"""
-    print(f"=== CHAT ENDPOINT CALLED ===")
+@app.post("/api/sessions/{session_id}/chat/stream")
+async def stream_chat(session_id: str, request: ChatRequest):
+    """Stream chat response"""
+    print("=== STREAMING CHAT ENDPOINT CALLED ===")
     print(f"Session ID: {session_id}")
     print(f"Request message: {request.message}")
     print(f"Web search enabled: {request.web_search}")
+    print(f"RAG enabled: {request.rag}")
+    print(f"Deep search enabled: {request.deep_search}")
+    print(f"Uploaded doc: {request.uploaded_doc}")
     
     session = SessionManager.get_session(session_id)
-    print(f"Session found: {bool(session)}")
-    print(f"Session keys: {list(session.keys()) if session else 'None'}")
-    
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
     
     # Add user message to session
     session["messages"].append({"role": "user", "content": request.message})
     print(f"Added user message to session. Total messages: {len(session['messages'])}")
     
-    # Get GPT configuration
-    gpt_config = session.get("gpt_config", {})
-    print(f"GPT config: {gpt_config}")
+    # Get GPT configuration - with better error handling
+    gpt_config = session.get("gpt_config")
+    if not gpt_config:
+        # If no GPT config, create a default one
+        gpt_config = {
+            "model": "gpt-4o-mini",
+            "webBrowser": False,
+            "hybridRag": False,
+            "mcp": False,
+            "instruction": "You are a helpful AI assistant."
+        }
+        session["gpt_config"] = gpt_config
+        SessionManager.update_session(session_id, session)
     
-    # Get LLM model
     llm_model = gpt_config.get("model", "gpt-4o-mini")
-    print(f"LLM model: {llm_model}")
+    print(f"=== GPT CONFIG ===")
+    print(f"Model: {llm_model}")
+    print(f"Web Browser: {gpt_config.get('webBrowser', False)}")
+    print(f"Hybrid RAG: {gpt_config.get('hybridRag', False)}")
+    print(f"MCP: {gpt_config.get('mcp', False)}")
+    print(f"Instruction: {gpt_config.get('instruction', '')[:100]}...")
     
     try:
-        # Prepare document content - FIX: Access DocumentInfo attributes correctly
+        # Prepare document content from stored documents
         uploaded_docs_content = []
         if session.get("uploaded_docs"):
             for doc in session["uploaded_docs"]:
-                if hasattr(doc, 'content'):
-                    uploaded_docs_content.append(doc.content)
-                elif isinstance(doc, dict):
-                    uploaded_docs_content.append(doc.get('content', ''))
+                if isinstance(doc, dict) and doc.get("content"):
+                    uploaded_docs_content.append(doc["content"])
         
         kb_docs_content = []
         if session.get("kb"):
-            print(f"Processing {len(session['kb'])} KB documents")
-            for i, doc in enumerate(session["kb"]):
-                print(f"KB doc {i}: type={type(doc)}, hasattr content={hasattr(doc, 'content')}")
-                if hasattr(doc, 'content'):
-                    kb_docs_content.append(doc.content)
-                    print(f"KB doc {i} content length: {len(doc.content)}")
-                elif isinstance(doc, dict):
-                    kb_docs_content.append(doc.get('content', ''))
-                    print(f"KB doc {i} dict content length: {len(doc.get('content', ''))}")
+            for doc in session["kb"]:
+                if isinstance(doc, dict) and doc.get("content"):
+                    kb_docs_content.append(doc["content"])
         
+        print(f"=== DOCUMENT CONTENT ===")
         print(f"Uploaded docs count: {len(uploaded_docs_content)}")
         print(f"KB docs count: {len(kb_docs_content)}")
-        
-        # Prepare NEW uploaded documents content
+        print(f"Uploaded docs content length: {sum(len(doc) for doc in uploaded_docs_content)}")
+        print(f"KB docs content length: {sum(len(doc) for doc in kb_docs_content)}")
         new_uploaded_docs_content = []
         if session.get("new_uploaded_docs"):
             for doc in session["new_uploaded_docs"]:
-                if hasattr(doc, 'content'):
-                    new_uploaded_docs_content.append(doc.content)
-                elif isinstance(doc, dict):
-                    new_uploaded_docs_content.append(doc.get('content', ''))
-
+                if isinstance(doc, dict) and doc.get("content"):
+                    new_uploaded_docs_content.append(doc["content"])
         state = GraphState(
             user_query=request.message,
             llm_model=llm_model,
             messages=session["messages"],
             doc=uploaded_docs_content,
-            new_uploaded_docs=new_uploaded_docs_content,  # Add this line
+            new_uploaded_docs=new_uploaded_docs_content,
             gpt_config=gpt_config,
             kb={"text": kb_docs_content} if kb_docs_content else None,
             web_search=request.web_search,  
@@ -301,32 +299,58 @@ async def chat(session_id: str, request: ChatRequest):
             uploaded_doc=request.uploaded_doc  
         )
         
-        print(f"Created graph state with {len(state['messages'])} messages") 
-        print(f"Web search enabled in state: {state.get('web_search')}")
-        print(f"RAG enabled in state: {state.get('rag')}")
-        print(f"Deep search enabled in state: {state.get('deep_search')}")
-        print(f"Uploaded doc indicator in state: {state.get('uploaded_doc')}")
+        print(f"=== GRAPH STATE CREATED ===")
+        print(f"State keys: {list(state.keys())}")
+        print(f"User query: {state.get('user_query', '')}")
+        print(f"LLM model: {state.get('llm_model', '')}")
+        print(f"Messages count: {len(state.get('messages', []))}")
+        print(f"Doc count: {len(state.get('doc', []))}")
+        print(f"KB: {bool(state.get('kb'))}")
+        print(f"Web search: {state.get('web_search', False)}")
+        print(f"RAG: {state.get('rag', False)}")
+        print(f"Deep search: {state.get('deep_search', False)}")
         
-        # Process through graph
-        result = await graph.ainvoke(state)
+        async def generate_stream():
+            full_response = ""
+            try:
+                print("=== STARTING STREAM GENERATION ===")
+                async for chunk in streaming_graph.stream_chat(state, session_id):
+                    chunk_data = json.dumps(chunk)
+                    yield f"data: {chunk_data}\n\n"
+                    
+                    if chunk.get("type") == "content" and chunk.get("data", {}).get("is_complete"):
+                        full_response = chunk.get("data", {}).get("full_response", "")
+                
+                if full_response:
+                    session["messages"].append({"role": "assistant", "content": full_response})
+                    SessionManager.update_session(session_id, session)
+                
+                yield f"data: {json.dumps({'type': 'done', 'data': {'session_id': session_id}})}\n\n"
+                
+            except Exception as e:
+                print(f"=== ERROR IN STREAM GENERATION ===")
+                print(f"Error: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                error_chunk = json.dumps({
+                    "type": "error",
+                    "data": {"error": str(e)}
+                })
+                yield f"data: {error_chunk}\n\n"
         
-        # Check for final_answer first (from synthesizer), then fall back to messages
-        if result.get("final_answer"):
-            assistant_message = {"role": "assistant", "content": result["final_answer"]}
-        else:
-            assistant_message = result.get("messages", [])[-1] if result.get("messages") else {"role": "assistant", "content": "I'm sorry, I couldn't process your request."}
-        
-        session["messages"].append(assistant_message)
-        
-        return ChatResponse(
-            message=assistant_message["content"],
-            session_id=session_id,
-            timestamp=datetime.now().isoformat()
+        return StreamingResponse(
+            generate_stream(),
+            media_type="text/plain",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*",
+            }
         )
-        
     except Exception as e:
-        print(f"=== ERROR IN CHAT ENDPOINT ===")
-        print(f"Error: {e}")
+        print(f"=== ERROR IN STREAM_CHAT ===")
+        print(f"Error: {str(e)}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))

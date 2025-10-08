@@ -2,17 +2,10 @@
 
 import * as React from "react";
 import {
-  BadgeCheck,
-  Bell,
   ChevronsUpDown,
-  CreditCard,
   Home,
   Library,
-  LogOut,
   LogOutIcon,
-  Shield,
-  Sparkles,
-  Tv2,
   Users2,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

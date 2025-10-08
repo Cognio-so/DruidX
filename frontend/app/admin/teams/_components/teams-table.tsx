@@ -299,7 +299,7 @@ export default function TeamsTable({
           <DialogHeader>
             <DialogTitle>Edit Team Member</DialogTitle>
             <DialogDescription>
-              Update the team member's information. Click save when you're done.
+              Update the team member&apos;s information. Click save&apos; when you are done.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

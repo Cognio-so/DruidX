@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { acceptInvitation } from "@/app/admin/teams/action";
 
 interface Invitation {
+  token: string;
   id: string;
   email: string;
   name: string;
@@ -45,19 +46,19 @@ export function AcceptInvitationForm({ invitation }: AcceptInvitationFormProps) 
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
         <UserPlus className="h-12 w-12 text-blue-500 mx-auto mb-4" />
-        <CardTitle>You're Invited!</CardTitle>
+        <CardTitle>You&apos;re Invited!</CardTitle>
         <CardDescription>
-          You've been invited to join EMSA
+          You&apos;ve been invited to join EMSA
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-center space-y-2">
-          <p className="font-medium">Hello {invitation.name}!</p>
+          <p className="font-medium">Hello {invitation.name}</p>
           <p className="text-sm text-muted-foreground">
-            You've been invited to join as a <strong>{invitation.role}</strong>
+            You&apos;ve been invited to join as a <strong>{invitation.role}</strong>
           </p>
           {invitation.message && (
-            <p className="text-sm italic">"{invitation.message}"</p>
+            <p className="text-sm italic">&quot;{invitation.message}&quot;</p>
           )}
         </div>
         

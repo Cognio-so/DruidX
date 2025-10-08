@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { GeorgianLariIcon, Globe2, InfoIcon, PlusIcon, ToolCase } from "lucide-react";
+import { GeorgianLariIcon, Globe2, PlusIcon } from "lucide-react";
 import { GptFormValues } from "@/lib/zodSchema";
 
 type PreviewGptProps = {

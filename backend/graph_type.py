@@ -8,6 +8,7 @@ class GraphState(TypedDict, total=False):
     llm_model: Optional[str]
     kb: Optional[Dict[str, Any]]
     doc: Optional[List[str]]
+    new_uploaded_docs: Optional[List[str]]  # New field for recently uploaded documents
     deep_search: Optional[bool]
     mcp: Optional[bool]
     mcp_schema: Optional[List[Dict[str, Any]]]
@@ -27,6 +28,7 @@ class GraphState(TypedDict, total=False):
     task_index: Optional[int]
     resolved_query: Optional[str]
     active_docs: Optional[Dict[str, Any]]
-    
+    resolved_queries: Optional[List[Dict[str, Any]]]
+
     deep_research_state: Optional[Dict[str, Any]]  
     deep_research_query: Optional[str]              

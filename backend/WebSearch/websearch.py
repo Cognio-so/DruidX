@@ -7,7 +7,9 @@ from graph_type import GraphState
 from pathlib import Path
 from langchain_core.messages import SystemMessage, HumanMessage
 from dotenv import load_dotenv
+from langchain_google_genai import ChatGoogleGenerativeAI
 load_dotenv()
+google_api_key=os.getenv("GOOGLE_API_KEY", "")
 _tavily: Optional[AsyncTavilyClient] = None
 if os.getenv("TAVILY_API_KEY"):
     try:
@@ -37,7 +39,7 @@ WEBSEARCH_PROMPT = load_prompt(
 
 WEBSEARCH_BASIC_PROMPT = load_prompt(
     BASIC_PROMPT_PATH,
-    "Provide a concise answer (3-5 sentences) based only on the search results. Cite as [Source X]."
+    "Provide a concise answer (3-10 sentences) based only on the user query and the search results. Cite as [Source X]."
 )
 
 async def web_search(query: str, max_results: int = 5, search_depth: str="basic") -> List[Document]:
@@ -76,6 +78,7 @@ def is_web_search_available() -> bool:
     return _tavily is not None
 
 
+
 async def run_web_search(state: GraphState) -> GraphState:
     """
     Graph node for Tavily web search:
@@ -112,7 +115,7 @@ async def run_web_search(state: GraphState) -> GraphState:
     print(f"[WebSearch] Loading prompt template...")
 
     sources_text = "\n".join(
-        [f"[Source {i+1}] {doc.metadata.get('title')} ({doc.metadata.get('url')})\n"
+        [f"[Source {i+1}] ({doc.metadata.get('url')})\n"
          f"{doc.page_content[:400]}"
          for i, doc in enumerate(results)]
     )
@@ -126,18 +129,27 @@ Now synthesize them into a clear, structured answer with:
 - Headings and subheadings
 - Numbered or bulleted lists
 - Citations using [Source X] that map to the provided sources
-- A final 'Sources Used' section with titles and URLs
+- A final 'Sources Used' section with URLs(no titles or anything).
 """
     print(f"[WebSearch] User prompt created, length: {len(user_prompt)}")
     print(f"[WebSearch] Calling LLM with model: {llm_model}")
     if not is_web_search:
-        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
+        llm=ChatGoogleGenerativeAI(
+                model="gemini-2.5-flash-lite",
+                temperature=0.3,
+                google_api_key=google_api_key,
+            )
         answer = await llm.ainvoke([
             SystemMessage(content=system_prompt),
             HumanMessage(content=f"User Query: {query}\n\nSearch Results:\n{sources_text}")
         ])
+        
     else:    
-        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
+        llm=ChatGoogleGenerativeAI(
+                model="gemini-2.5-flash-lite",
+                temperature=0.3,
+                google_api_key=google_api_key,
+            )
         answer = await llm.ainvoke([
                 SystemMessage(content=system_prompt),
                 HumanMessage(content=user_prompt)

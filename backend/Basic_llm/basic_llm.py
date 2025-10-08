@@ -4,6 +4,10 @@ from typing import Optional, Dict, Any
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 import os
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+# Remove this line - don't set it at module level
+# google_api_key=os.getenv("GOOGLE_API_KEY", "")
 
 prompt_path = os.path.join(os.path.dirname(__file__), "basic_llm.md")
 try:
@@ -14,16 +18,30 @@ except FileNotFoundError:
 
 async def SimpleLLm(state: GraphState) -> GraphState:
     llm_model = state.get("llm_model", "gpt-4o-mini")
-    user_query = state.get("user_query", "")
+    user_query = state.get("resolved_query") or state.get("user_query", "")
     past_messages = state.get("messages", [])
     summary = state.get("context", {}).get("session", {}).get("summary", "")
 
     try:
         print(f"SimpleLLM processing query: {user_query}")
         print(f"Using model: {llm_model}")
-        print(f"API Key set: {bool(os.getenv('OPENAI_API_KEY'))}")
-
-        chat = ChatOpenAI(model=llm_model or "gpt-4o-mini", temperature=0.2)
+        
+        # Get the API key inside the function
+        google_api_key = os.getenv("GOOGLE_API_KEY", "")
+        print(f"Google API Key set: {bool(google_api_key)}")
+        
+        # Check if we have a valid API key
+        if not google_api_key:
+            print("No Google API key found, falling back to OpenAI")
+            # Fallback to OpenAI
+            llm = ChatOpenAI(model=llm_model, temperature=0.3)
+        else:
+            # Use Gemini
+            llm = ChatGoogleGenerativeAI(
+                model="gemini-2.5-flash-lite",
+                temperature=0.3,
+                api_key=google_api_key,
+            )
 
         # Build conversation messages (keep summary + last few turns)
         formatted_history = []
@@ -40,7 +58,7 @@ async def SimpleLLm(state: GraphState) -> GraphState:
         messages = [SystemMessage(content=prompt)] + formatted_history + [HumanMessage(content=user_query)]
 
         print(f"Sending messages to LLM: {len(messages)} messages")
-        response = await chat.ainvoke(messages)
+        response = await llm.ainvoke(messages)
         print(f"SimpleLLM response received: {response.content[:100]}...")
         state.setdefault("messages", []).append({"role": "assistant", "content": response.content})
         state["response"] = response.content

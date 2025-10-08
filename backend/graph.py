@@ -6,7 +6,8 @@ from Basic_llm.basic_llm import SimpleLLm
 from Rag.Rag import Rag
 from WebSearch.websearch import run_web_search
 from Image.image import generate_image
-from MCP.mcp_node import run_mcp_stdio
+from Synthesizer.synthesizer import synthesize_final_answer
+# from MCP.mcp_node import run_mcp_stdio
 from DeepResearch import (
     initialize_deep_research,
     plan_research_node,
@@ -28,17 +29,19 @@ def create_graph():
     g.add_node("execute_research", trace_node(execute_research_node, "execute_research"))
     g.add_node("analyze_gaps", trace_node(analyze_gaps_node, "analyze_gaps"))
     g.add_node("synthesize_report", trace_node(synthesize_report_node, "synthesize_report"))
-    g.add_node("mcp", trace_node(run_mcp_stdio,"mcp"))
+    # g.add_node("mcp", trace_node(run_mcp_stdio,"mcp"))
     g.set_entry_point("orchestrator")
-    
+    g.add_node("AnswerSynthesizer", trace_node(synthesize_final_answer, "AnswerSynthesizer"))
+
     g.add_conditional_edges("orchestrator",
         route_decision, {
             "RAG": "RAG",
             "SimpleLLM": "SimpleLLM",
             "WebSearch": "WebSearch",
             "image": "image",
-            "mcp":"mcp",
+            # "mcp":"mcp",
             "deepResearch": "initialize_deep_research",
+             "AnswerSynthesizer": "AnswerSynthesizer",
             "END": END
         })
 
@@ -46,9 +49,9 @@ def create_graph():
     g.add_edge("RAG", "orchestrator")
     g.add_edge("WebSearch", "orchestrator")
     g.add_edge("image", "orchestrator")
-    g.add_edge("mcp", "orchestrator")
+    # g.add_edge("mcp", "orchestrator")
     g.add_edge("initialize_deep_research", "plan_research")
-
+    g.add_edge("AnswerSynthesizer", END)
     g.add_conditional_edges("plan_research",
         route_deep_research, {
             "execute_research": "execute_research",

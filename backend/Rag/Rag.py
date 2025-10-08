@@ -182,7 +182,13 @@ async def _hybrid_search_rrf(collection_name: str, query: str, limit: int, k: in
     bm25_scores = await _bm25_scores(bm25, tokenized_query)
     scored_docs = [(score, docs[str(idx)]) for idx, score in enumerate(bm25_scores)]
 
-    bm25_threshold = 0.1
+   
+    if len(bm25_scores) > 0:
+        max_score = max(bm25_scores)
+        mean_score = sum(bm25_scores) / len(bm25_scores)
+        bm25_threshold = max(max_score * 0.2, mean_score * 0.5, 0.1)
+    else:
+        bm25_threshold = 0.1
     bm25_ranking = [doc for score, doc in scored_docs if score > bm25_threshold]
 
     bm25_ranking = bm25_ranking[:limit * 3]
@@ -280,9 +286,11 @@ async def Rag(state: GraphState) -> GraphState:
     
         await retreive_docs(docs, "doc_collection", is_hybrid=rag)
         if rag:
-            user_result=await _hybrid_search_intersection("doc_collection", user_query, limit=3)
+            
+            user_result = await _hybrid_search_rrf("doc_collection", user_query, limit=6, k=60)
         else:    
-            user_result = await _hybrid_search_rrf("doc_collection", user_query,limit=3, k=60)
+           
+            user_result = await _search_collection("doc_collection", user_query, limit=6)
         
     if kb_docs:
         kb_texts = []
@@ -295,9 +303,9 @@ async def Rag(state: GraphState) -> GraphState:
 
         await retreive_docs(kb_texts, "kb_collection", is_hybrid=rag)
         if rag:
-            kb_result= await _hybrid_search_intersection("kb_collection",user_query, limit=3)
+            kb_result= await _hybrid_search_intersection("kb_collection",user_query, limit=6)
         else:    
-            kb_result =await _hybrid_search_rrf("kb_collection", user_query, limit=3, k=60)
+            kb_result =await _hybrid_search_rrf("kb_collection", user_query, limit=6, k=60)
 
     
     print(f"[RAG] Got {len(user_result)} doc results, {len(kb_result)} KB results")
@@ -349,7 +357,7 @@ INSTRUCTIONS:
     ]
     
     # Generate final response
-    llm = ChatOpenAI(model=llm_model, temperature=temperature)
+    llm = ChatOpenAI(model="gpt-5-nano", temperature=temperature)
     ai_response = await llm.ainvoke(final_messages)
     state["messages"] = state.get("messages", []) + [ai_response.dict()]
     state["response"] = ai_response.content

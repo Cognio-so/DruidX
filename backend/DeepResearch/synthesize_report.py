@@ -4,7 +4,11 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
 from llm import get_reasoning_llm
 from DeepResearch.prompt_loader import PROMPTS
-
+from langchain_google_genai import ChatGoogleGenerativeAI
+from dotenv import load_dotenv
+load_dotenv()
+import os
+google_api_key=os.getenv("GOOGLE_API_KEY", "")
 llm1 = get_reasoning_llm()
 
 async def synthesize_report_node(state: GraphState) -> GraphState:
@@ -41,7 +45,12 @@ async def synthesize_report_node(state: GraphState) -> GraphState:
     )
 
     llm = ChatOpenAI(model=llm_model, temperature=0.3)
-    response = await llm1.ainvoke([HumanMessage(content=synthesis_prompt)])
+    llm2=ChatGoogleGenerativeAI(
+                model="gemini-2.5-flash-lite",
+                temperature=0.3,
+                google_api_key=google_api_key,
+            )
+    response = await llm2.ainvoke([HumanMessage(content=synthesis_prompt)])
     
     final_report = response.content
 

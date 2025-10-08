@@ -62,6 +62,7 @@ class SessionManager:
             "session_id": session_id,
             "messages": [],
             "uploaded_docs": [],
+            "new_uploaded_docs": [],  # Add this line
             "kb": [],
             "gpt_config": None,
             "created_at": datetime.now().isoformat()
@@ -163,6 +164,7 @@ async def upload_documents(
     if doc_type == "user":
         processed_docs = await process_uploaded_files_api(files)
         session["uploaded_docs"].extend(processed_docs)
+        session["new_uploaded_docs"] = processed_docs  # Add this line
         print(f"Added {len(processed_docs)} user docs. Total user docs: {len(session['uploaded_docs'])}")
         
         # Store in Cloudflare R2 for persistence
@@ -184,6 +186,7 @@ async def upload_documents(
     elif doc_type == "kb":
         processed_docs = await process_knowledge_base_files(files)
         session["kb"].extend(processed_docs)
+        session["new_uploaded_docs"] = processed_docs  # Add this line
         print(f"Added {len(processed_docs)} KB docs. Total KB docs: {len(session['kb'])}")
         print(f"KB docs content preview: {[doc.content[:50] + '...' if hasattr(doc, 'content') else str(doc)[:50] + '...' for doc in processed_docs]}")
         
@@ -275,11 +278,21 @@ async def chat(session_id: str, request: ChatRequest):
         print(f"Uploaded docs count: {len(uploaded_docs_content)}")
         print(f"KB docs count: {len(kb_docs_content)}")
         
+        # Prepare NEW uploaded documents content
+        new_uploaded_docs_content = []
+        if session.get("new_uploaded_docs"):
+            for doc in session["new_uploaded_docs"]:
+                if hasattr(doc, 'content'):
+                    new_uploaded_docs_content.append(doc.content)
+                elif isinstance(doc, dict):
+                    new_uploaded_docs_content.append(doc.get('content', ''))
+
         state = GraphState(
             user_query=request.message,
             llm_model=llm_model,
             messages=session["messages"],
             doc=uploaded_docs_content,
+            new_uploaded_docs=new_uploaded_docs_content,  # Add this line
             gpt_config=gpt_config,
             kb={"text": kb_docs_content} if kb_docs_content else None,
             web_search=request.web_search,  
@@ -296,7 +309,13 @@ async def chat(session_id: str, request: ChatRequest):
         
         # Process through graph
         result = await graph.ainvoke(state)
-        assistant_message = result.get("messages", [])[-1] if result.get("messages") else {"role": "assistant", "content": "I'm sorry, I couldn't process your request."}
+        
+        # Check for final_answer first (from synthesizer), then fall back to messages
+        if result.get("final_answer"):
+            assistant_message = {"role": "assistant", "content": result["final_answer"]}
+        else:
+            assistant_message = result.get("messages", [])[-1] if result.get("messages") else {"role": "assistant", "content": "I'm sorry, I couldn't process your request."}
+        
         session["messages"].append(assistant_message)
         
         return ChatResponse(

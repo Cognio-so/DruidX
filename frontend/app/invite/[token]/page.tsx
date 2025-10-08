@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { getInvitation, acceptInvitation } from "@/app/admin/teams/action";
+import { getInvitation } from "@/app/admin/teams/action";
 import { AcceptInvitationForm } from "./_components/accept-invitation-form";
 
 interface InvitePageProps {
@@ -23,7 +23,7 @@ export default async function InvitePage({ params }: InvitePageProps) {
         <AcceptInvitationForm invitation={invitation} />
       </div>
     );
-  } catch (error) {
+  } catch {
     notFound();
   }
 }

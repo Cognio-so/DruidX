@@ -47,7 +47,7 @@ export async function createGpt(data: {
       userId: session.user.id,
       name: validatedData.gptName,
       description: validatedData.gptDescription,
-      model: modelMapping[validatedData.model] as any,
+      model: modelMapping[validatedData.model] as "gpt_4" | "gpt_4o" | "gpt_5",
       instruction: validatedData.instructions,
       webBrowser: validatedData.webSearch,
       hybridRag: validatedData.hybridRag, // Added hybridRag field

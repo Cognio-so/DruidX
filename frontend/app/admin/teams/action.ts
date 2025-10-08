@@ -37,7 +37,7 @@ export async function createInvitation(data: {
       email,
       name,
       role,
-      message: message || null,
+      message: message || undefined,
       token,
       expiresAt,
       status: "pending",

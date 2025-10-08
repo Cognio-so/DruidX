@@ -1,6 +1,5 @@
 "use client";
 
-import { z } from "zod";
 import { Control, ControllerRenderProps } from "react-hook-form";
 import {
   FormField,
@@ -12,7 +11,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 
 interface McpSchemaFieldProps {
-  control: Control<any>;
+  control: Control<Record<string, unknown>>;
 }
 
 export default function McpSchemaField({ control }: McpSchemaFieldProps) {
@@ -23,7 +22,7 @@ export default function McpSchemaField({ control }: McpSchemaFieldProps) {
       render={({
         field,
       }: {
-        field: ControllerRenderProps<any, "mcpSchema">;
+        field: ControllerRenderProps<Record<string, unknown>, "mcpSchema">;
       }) => (
         <FormItem>
           <FormLabel>MCP Input Schema *</FormLabel>
@@ -31,6 +30,7 @@ export default function McpSchemaField({ control }: McpSchemaFieldProps) {
             <Textarea
               placeholder="Enter JSON schema for MCP integration"
               {...field}
+              value={field.value as string || ""}
               className="font-mono w-full min-h-[200px]"
               required
             />

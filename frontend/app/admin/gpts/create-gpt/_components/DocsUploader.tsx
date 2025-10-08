@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useCallback, useRef } from "react";
 
 type DocsUploaderProps = {
-  value: string[]; // Array of S3 URLs
+  value: string[]; 
   onChange: (urls: string[]) => void;
 };
 
@@ -249,7 +249,7 @@ export default function DocsUploader({ value, onChange }: DocsUploaderProps) {
     } catch (error) {
       // Individual file errors are handled above
     }
-  }, [value, onChange, maxFiles, maxSize]);
+  }, [value, onChange, maxFiles, maxSize, validateFile]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {

@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const nodemailer = require('nodemailer')
+import * as nodemailer from 'nodemailer'
 
 const transporter = nodemailer.createTransport({
   service: process.env.EMAIL_SERVICE || 'gmail',
   auth: {
-    user: process.env.GMAIL_USERNAME,
-    pass: process.env.GMAIL_PASSWORD,
+    user: process.env.GMAIL_USERNAME || '',
+    pass: process.env.GMAIL_PASSWORD || '',
   },
 })
 
 const sender = {
-  email: process.env.GMAIL_USERNAME,
+  email: process.env.GMAIL_USERNAME || '',
   name: process.env.MAIL_SENDER_NAME || 'EMSA',
 }
 
@@ -55,9 +54,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
-
-
 
     const subject = "Invitation to join EMSA"
     const htmlBody = INVITATION_EMAIL_TEMPLATE

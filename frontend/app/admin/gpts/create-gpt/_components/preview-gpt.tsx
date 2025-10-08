@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { GeorgianLariIcon, Globe2, PlusIcon } from "lucide-react";
 import { GptFormValues } from "@/lib/zodSchema";
+import Image from "next/image";
 
 type PreviewGptProps = {
   data: GptFormValues;
@@ -31,9 +32,11 @@ export function PreviewGpt({ data }: PreviewGptProps) {
         {/* GPT Avatar */}
         <div className="mb-6">
           {imageUrl ? (
-            <img
+            <Image
               src={imageUrl}
               alt={gptName || "GPT Avatar"}
+              width={96}
+              height={96}
               className="w-24 h-24 rounded-full object-cover border-4 border-white/20"
             />
           ) : (

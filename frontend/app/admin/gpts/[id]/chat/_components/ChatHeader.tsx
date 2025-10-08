@@ -3,7 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/ui/themeToggle";
 import { authClient } from "@/lib/auth-client";
-import { Bot, Sparkles } from "lucide-react";
+import { Bot} from "lucide-react";
 import Image from "next/image";
 
 interface ChatHeaderProps {

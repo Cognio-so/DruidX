@@ -17,6 +17,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import Image from "next/image";
 
 interface MarkdownProps {
   content: string;
@@ -50,7 +51,7 @@ const SourcesSection = ({ content }: { content: string }) => {
   };
 
   const parseUrlLines = (urlLines: string[], fullText: string) => {
-    const sources: any[] = [];
+    const sources: { title: string; url: string }[] = [];
 
     for (const urlLine of urlLines) {
       const url = urlLine.replace("URL:", "").trim();
@@ -76,8 +77,8 @@ const SourcesSection = ({ content }: { content: string }) => {
 
   const parseSourcesText = (sourcesText: string) => {
     const sourceLines = sourcesText.split("\n").filter((line) => line.trim());
-    const sources: any[] = [];
-    let currentSource: any = null;
+    const sources: { title: string; url: string }[] = [];
+    let currentSource: { title: string; url: string } | null = null;
 
     for (const line of sourceLines) {
       if (line.startsWith("URL:")) {
@@ -130,11 +131,13 @@ const SourcesSection = ({ content }: { content: string }) => {
               key={index}
               className="flex items-center gap-3 p-3 rounded-lg border bg-background/50 hover:bg-muted/70 transition-colors"
             >
-              <img
+              <Image
                 src={`https://www.google.com/s2/favicons?domain=${new URL(
                   source.url
                 ).hostname}&sz=16`}
                 alt=""
+                width={16}
+                height={16}
                 className="w-4 h-4 flex-shrink-0"
                 onError={(e) => {
                   e.currentTarget.style.display = "none";

@@ -14,9 +14,13 @@ interface Invitation {
   email: string;
   name: string;
   role: string;
-  message?: string;
+  message: string | null;
   status: string;
-  expiresAt: string;
+  expiresAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  acceptedAt: Date | null;
+  acceptedBy: string | null;
 }
 
 interface AcceptInvitationFormProps {

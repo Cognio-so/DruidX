@@ -10,7 +10,6 @@ interface TeamsHeaderProps {
   roleFilter: string;
   onSearchChange: (value: string) => void;
   onRoleFilterChange: (role: string) => void;
-  onStatusFilterChange: (status: string) => void;
   onClearFilters: () => void;
 }
 

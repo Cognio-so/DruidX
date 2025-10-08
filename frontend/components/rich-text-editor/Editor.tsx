@@ -5,7 +5,7 @@ import StaterKit from "@tiptap/starter-kit";
 import { MenuBar } from "./MenuBar";
 import TextAlign from "@tiptap/extension-text-align";
 
-export function RichTextEditor({ field }: { field: any }) {
+export function RichTextEditor({ field }: { field: { value?: string; onChange: (value: string) => void } }) {
   const editor = useEditor({
     extensions: [
       StaterKit,
@@ -22,9 +22,7 @@ export function RichTextEditor({ field }: { field: any }) {
     },
 
     onUpdate: ({ editor }) => {
-      const jsonData = editor.getJSON();
       const plainText = editor.getText();
-
       field.onChange(plainText);
     },
 

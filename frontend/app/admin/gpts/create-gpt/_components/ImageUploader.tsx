@@ -3,6 +3,7 @@
 import { CloudUploadIcon, Loader2, X } from "lucide-react";
 import { useState, ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 type ImageUploaderProps = {
   value?: string; // S3 URL of uploaded image
@@ -149,9 +150,11 @@ export function ImageUploader({ value, onChange }: ImageUploaderProps) {
         }`}
       >
         {preview ? (
-          <img
+          <Image
             src={preview}
             alt="Preview"
+            width={128}
+            height={128}
             className="w-full h-full object-cover rounded-full"
           />
         ) : (

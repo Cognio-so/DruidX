@@ -51,8 +51,6 @@ import {
   Mail,
   Calendar,
   Loader2,
-  Search,
-  Filter,
 } from "lucide-react";
 import { toast } from "sonner";
 import { updateUser, deleteUser } from "../action";

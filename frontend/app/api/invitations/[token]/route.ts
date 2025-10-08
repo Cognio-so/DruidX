@@ -3,12 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const { token } = params;
+    const { token } = await params;
 
-    const invitation = await prisma.Invitation.findUnique({
+    const invitation = await prisma.invitation.findUnique({ 
       where: { token },
     });
 
@@ -28,8 +28,8 @@ export async function GET(
     }
 
     return NextResponse.json(invitation);
-  } catch (error) {
-    console.error('Error fetching invitation:', error);
+  } catch {
+    console.error('Error fetching invitation:');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -39,12 +39,12 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const { token } = params;
+    const { token } = await params;
 
-    const invitation = await prisma.Invitation.findUnique({
+    const invitation = await prisma.invitation.findUnique({
       where: { token },
     });
 
@@ -70,7 +70,7 @@ export async function POST(
     }
 
     // Update invitation status to accepted
-    await prisma.Invitation.update({
+    await prisma.invitation.update({
       where: { token },
       data: {
         status: 'accepted',
@@ -79,8 +79,8 @@ export async function POST(
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error accepting invitation:', error);
+  } catch {
+    console.error('Error accepting invitation:');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

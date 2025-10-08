@@ -6,21 +6,57 @@ import ChatMessage from "./_components/ChatMessage";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatSession } from "@/hooks/use-chat-session";
 import { useChatMessages } from "@/hooks/use-chat-messages";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+
+interface GptData {
+  id: string;
+  name: string;
+  image: string;
+  description: string;
+}
 
 export default function ChatGptById() {
+  const params = useParams();
+  const gptId = params.id as string;
   const { sessionId, uploadDocument, hybridRag } = useChatSession();
   const { messages, isLoading, sendMessage } = useChatMessages(sessionId);
+  const [gptData, setGptData] = useState<GptData | null>(null);
 
   const hasMessages = messages.length > 0;
 
+  useEffect(() => {
+    const fetchGptData = async () => {
+      try {
+        if (gptId) {
+          const response = await fetch(`/api/gpts/${gptId}`);
+          if (response.ok) {
+            const gpt = await response.json();
+            setGptData({
+              id: gpt.id,
+              name: gpt.name,
+              image: gpt.image,
+              description: gpt.description
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch GPT data:', error);
+      }
+    };
+
+    fetchGptData();
+  }, [gptId]);
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      {/* Header - stays at top */}
       <div className="flex-shrink-0 p-2 bg-background">
-        <ChatHeader />
+        <ChatHeader 
+          gptName={gptData?.name}
+          gptImage={gptData?.image}
+        />
       </div>
 
-      {/* Messages - only this scrolls */}
       {hasMessages && (
         <div className="flex-1 min-h-0">
           <ScrollArea className="h-full p-2">
@@ -39,7 +75,6 @@ export default function ChatGptById() {
         </div>
       )}
 
-      {/* Input Area - centered when no messages, at bottom when messages exist */}
       <div
         className={`${
           hasMessages

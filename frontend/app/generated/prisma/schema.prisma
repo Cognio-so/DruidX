@@ -18,7 +18,7 @@ model User {
   id            String    @id
   name          String
   email         String
-  role          String?
+  role          String    @default("user") // Add default value
   emailVerified Boolean   @default(false)
   image         String?
   createdAt     DateTime  @default(now())
@@ -85,13 +85,30 @@ model Gpt {
   model         ModelEnum
   instruction   String    @db.Text
   webBrowser    Boolean   @default(false)
-  hybridRag     Boolean   @default(false) // Add hybrid RAG field
+  hybridRag     Boolean   @default(false) // Added hybrid RAG field
   mcp           Boolean   @default(false)
   mcpSchema     Json?
   image         String
   knowledgeBase String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+model Invitation {
+  id         String    @id @default(cuid())
+  email      String
+  name       String
+  role       String
+  message    String?
+  token      String    @unique
+  status     String    @default("pending") // pending, accepted, expired
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  acceptedAt DateTime?
+  acceptedBy String? // User ID who accepted the invitation
+
+  @@map("invitation")
 }
 
 enum ModelEnum {

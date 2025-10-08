@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if invitation already exists for this email
-    const existingInvitation = await prisma.Invitation.findFirst({
+    const existingInvitation = await prisma.invitation.findFirst({
       where: {
         email,
         status: 'pending',
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const invitation = await prisma.Invitation.create({
+    const invitation = await prisma.invitation.create({
       data: {
         email,
         name,

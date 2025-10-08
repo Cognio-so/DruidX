@@ -1,0 +1,51 @@
+import { z } from "zod";
+
+export const gptSchema = z.object({
+  gptName: z
+    .string()
+    .min(3, { message: "GPT name must be at least 3 characters long" })
+    .max(50, { message: "GPT name must not exceed 50 characters" }),
+
+  gptDescription: z
+    .string()
+    .min(10, { message: "Description must be at least 10 characters long" })
+    .max(300, { message: "Description must not exceed 300 characters" }),
+
+    model: z.enum(["gpt-4", "gpt-4o", "gpt-5"]).refine((val) => !!val, {
+    message: "Please select a model",
+  }),
+
+  instructions: z
+    .string()
+    .min(20, { message: "Instructions must be at least 20 characters long" })
+    .max(80000, { message: "Instructions must not exceed 80000 characters" }),
+
+  webSearch: z.boolean(), 
+  hybridRag: z.boolean(), // Added hybrid RAG field
+  mcp: z.boolean(), 
+
+  mcpSchema: z
+    .string()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val || val.trim() === '') return true;
+        
+        try {
+          JSON.parse(val);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: "Must be valid JSON schema" }
+    ),
+
+  docs: z
+    .array(z.string())
+    .max(10, { message: "You can upload at most 10 documents" }),
+
+  imageUrl: z.string().optional(), 
+});
+
+export type GptFormValues = z.infer<typeof gptSchema>;

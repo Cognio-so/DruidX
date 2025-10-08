@@ -1,4 +1,3 @@
-import { GalleryVerticalEnd } from "lucide-react";
 import { LoginForm } from "./_components/login-form";
 import Image from "next/image";
 import logo from "@/public/EMSA logo.png";

@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -17,16 +16,13 @@ import {
 import { Gpt } from "@/data/get-gpts";
 import {
   Bot,
-  Brain,
   Calendar,
   CircuitBoard,
-  Eye,
   FileSearch,
   Globe,
   MessageCircle,
   MoreHorizontal,
   Pencil,
-  Telescope,
   Trash,
 } from "lucide-react";
 import Image from "next/image";

@@ -149,19 +149,16 @@ export function GptCard({ gpt }: GptCardProps) {
             {gpt.webBrowser && (
               <div className="flex items-center gap-1">
                 <Globe className="w-3 h-3 sm:w-4 sm:h-4 text-green-600 flex-shrink-0" />
-                <span className="hidden sm:inline text-xs">Web</span>
               </div>
             )}
             {gpt.hybridRag && (
               <div className="flex items-center gap-1">
                 <FileSearch className="w-3 h-3 sm:w-4 sm:h-4 text-purple-600 flex-shrink-0" />
-                <span className="hidden sm:inline text-xs">RAG</span>
               </div>
             )}
             {gpt.mcp && (
               <div className="flex items-center gap-1">
                 <CircuitBoard className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600 flex-shrink-0" />
-                <span className="hidden sm:inline text-xs">MCP</span>
               </div>
             )}
             <span className="text-purple-500 font-medium text-xs sm:text-sm">

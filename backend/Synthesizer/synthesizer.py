@@ -25,7 +25,18 @@ Based on the user's original query and the collected results from the execution 
 - Combine related information. For example, if two steps found information about machine learning, synthesize it into one section.
 - Write in a helpful and clear tone.
 """
-
+async def send_status_update(state: GraphState, message: str, progress: int = None):
+    """Send status update if callback is available"""
+    if hasattr(state, '_status_callback') and state._status_callback:
+        await state._status_callback({
+            "type": "status",
+            "data": {
+                "status": "processing",
+                "message": message,
+                "current_node": "AnswerSynthesizer",
+                "progress": progress
+            }
+        })
 def _format_intermediate_results(intermediate_results: list) -> str:
     """Formats the intermediate results into a readable string for the prompt."""
     if not intermediate_results:
@@ -47,21 +58,21 @@ async def synthesize_final_answer(state: GraphState) -> GraphState:
     
     user_query = state.get("user_query", "No original query found.")
     intermediate_results = state.get("intermediate_results", [])
-    
+    await send_status_update(state, f"🔄 Merging information from {len(intermediate_results)} sources...", 20)
     formatted_results = _format_intermediate_results(intermediate_results)
     
     prompt = SYNTHESIZER_PROMPT.format(
         user_query=user_query,
         formatted_results=formatted_results
     )
-    
+    await send_status_update(state, "🤖 Generating final comprehensive answer...", 60)
     llm=ChatGoogleGenerativeAI(
                 model="gemini-2.5-flash-lite",
                 temperature=0.3,
                 google_api_key=google_api_key,
             )
     final_answer = await llm.ainvoke([HumanMessage(content=prompt)])
-    
+    await send_status_update(state, "✅ Final answer synthesis completed", 100)
     print("--- FINAL ANSWER GENERATED ---")
     state["final_answer"] = final_answer.content
     

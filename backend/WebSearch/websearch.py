@@ -24,7 +24,18 @@ else:
 # At top of websearch.py
 PROMPT_PATH = os.path.join(os.path.dirname(__file__), "websearch.md")
 BASIC_PROMPT_PATH = os.path.join(os.path.dirname(__file__), "websearch_basic.md")
-
+async def send_status_update(state: GraphState, message: str, progress: int = None):
+    """Send status update if callback is available"""
+    if hasattr(state, '_status_callback') and state._status_callback:
+        await state._status_callback({
+            "type": "status",
+            "data": {
+                "status": "processing",
+                "message": message,
+                "current_node": "WebSearch",
+                "progress": progress
+            }
+        })
 def load_prompt(path: str, fallback: str) -> str:
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -98,7 +109,7 @@ async def run_web_search(state: GraphState) -> GraphState:
         state["response"] = "No query provided for web search."
         print(f"[WebSearch] No query provided")
         return state
-
+    await send_status_update(state, "🌐 Gathering information from websites...", 20)
     print(f"[WebSearch] Calling web_search function...")
     if is_web_search:
         results = await web_search(query, max_results=5,search_depth="advanced")
@@ -111,8 +122,8 @@ async def run_web_search(state: GraphState) -> GraphState:
         state["response"] = "No web results found or Tavily unavailable."
         print(f"[WebSearch] No results found, returning early")
         return state
-
-    print(f"[WebSearch] Loading prompt template...")
+    
+    await send_status_update(state, f"📄 Processing {len(results)} search results...", 40)
 
     sources_text = "\n".join(
         [f"[Source {i+1}] ({doc.metadata.get('url')})\n"
@@ -131,8 +142,7 @@ Now synthesize them into a clear, structured answer with:
 - Citations using [Source X] that map to the provided sources
 - A final 'Sources Used' section with URLs(no titles or anything).
 """
-    print(f"[WebSearch] User prompt created, length: {len(user_prompt)}")
-    print(f"[WebSearch] Calling LLM with model: {llm_model}")
+    await send_status_update(state, "🤖 Generating response from search results...", 70)
     if not is_web_search:
         llm=ChatGoogleGenerativeAI(
                 model="gemini-2.5-flash-lite",
@@ -163,6 +173,7 @@ Now synthesize them into a clear, structured answer with:
         "query": query,
         "output": state["response"]
     })
+        await send_status_update(state, "✅ Web search completed", 100)
 
     except Exception as e:
         state["response"] = f"Web search formatting failed: {e}"

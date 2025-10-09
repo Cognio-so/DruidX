@@ -23,9 +23,9 @@ class StreamingGraph:
         session_id: str
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
-        Stream chat responses from the graph
+        Enhanced streaming chat with real-time status updates
         """
-        print("=== STREAMING CHAT STARTED ===")
+        print("=== ENHANCED STREAMING CHAT STARTED ===")
         print(f"Session ID: {session_id}")
         print(f"User query: {state.get('user_query', '')}")
         
@@ -36,57 +36,96 @@ class StreamingGraph:
                 "data": {
                     "status": "processing",
                     "message": "Starting processing...",
-                    "session_id": session_id
+                    "session_id": session_id,
+                    "current_node": "orchestrator",
+                    "progress": 0
                 }
             }
-            print("=== RUNNING GRAPH ===")
-            final_state = await self.graph.ainvoke(state)
-            response = final_state.get('response') or final_state.get('final_answer')
             
-            if response:
-                print(f"=== RESPONSE FOUND ===")
-                print(f"Response: {response[:100]}...")
-                chunk_size = 10  # Stream 10 words at a time
-                words = response.split()
-                print(f"=== STARTING CHUNK STREAMING ===")
-                print(f"Total words: {len(words)}, Chunks: {len(words) // chunk_size + 1}")
-
-                for i in range(0, len(words), chunk_size):
-                    chunk = " ".join(words[i:i+chunk_size]) + " "
-                    print(f"Streaming chunk {i//chunk_size + 1}: {chunk[:50]}...")
-                    yield {
-                        "type": "content",
-                        "data": {
-                            "content": chunk,
-                            "full_response": " ".join(words[:i+chunk_size]),
-                            "is_complete": i+chunk_size >= len(words)
-                        }
-                    }
-                    # Very small delay for smooth streaming
-                    await asyncio.sleep(0.05)  # 1ms delay per chunk
-
-                print(f"=== CHUNK STREAMING COMPLETED ===")
+            # Set up status callback to capture status updates from nodes
+            status_updates = []
+            
+            async def status_callback(status_data):
+                status_updates.append(status_data)
+            
+            # Add status callback to state
+            state["_status_callback"] = status_callback
+            
+            # Stream results as each node completes
+            full_response = ""
+            async for node_result in self.graph.astream(state):
+                print(f"=== NODE RESULT RECEIVED ===")
+                print(f"Node result keys: {list(node_result.keys())}")
                 
-                # Mark as complete
+                # Send any pending status updates
+                while status_updates:
+                    status_update = status_updates.pop(0)
+                    yield status_update
+                
+                # Check if any node produced a response
+                for node_name, node_data in node_result.items():
+                    if isinstance(node_data, dict) and "response" in node_data:
+                        response = node_data["response"]
+                        if response and response != full_response:  # Avoid duplicate streaming
+                            print(f"=== STREAMING RESPONSE FROM {node_name} ===")
+                            print(f"Response length: {len(response)}")
+                            
+                            # Stream the response in smaller chunks
+                            chunk_size = 3  # Smaller chunks for faster streaming
+                            words = response.split()
+                            
+                            for i in range(0, len(words), chunk_size):
+                                chunk = " ".join(words[i:i+chunk_size]) + " "
+                                yield {
+                                    "type": "content",
+                                    "data": {
+                                        "content": chunk,
+                                        "full_response": " ".join(words[:i+chunk_size]),
+                                        "is_complete": i+chunk_size >= len(words),
+                                        "node": node_name
+                                    }
+                                }
+                                # Faster streaming delay
+                                await asyncio.sleep(0.02)
+                            
+                            full_response = response
+                            
+                            # Mark as complete for this node
+                            yield {
+                                "type": "content",
+                                "data": {
+                                    "content": "",
+                                    "full_response": full_response,
+                                    "is_complete": True,
+                                    "node": node_name
+                                }
+                            }
+            
+            # Send any remaining status updates
+            while status_updates:
+                status_update = status_updates.pop(0)
+                yield status_update
+            
+            # Final completion
+            if full_response:
                 yield {
                     "type": "content",
                     "data": {
                         "content": "",
-                        "full_response": response,
+                        "full_response": full_response,
                         "is_complete": True
                     }
                 }
             else:
-                print("=== NO RESPONSE FOUND ===")
                 yield {
                     "type": "error",
                     "data": {
                         "error": "No response generated from graph"
                     }
                 }
-                
+                    
         except Exception as e:
-            print(f"=== ERROR IN STREAMING CHAT ===")
+            print(f"=== ERROR IN ENHANCED STREAMING CHAT ===")
             print(f"Error: {str(e)}")
             import traceback
             traceback.print_exc()

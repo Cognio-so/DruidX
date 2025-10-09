@@ -270,17 +270,23 @@ async def stream_chat(session_id: str, request: ChatRequest):
                 if isinstance(doc, dict) and doc.get("content"):
                     uploaded_docs_content.append(doc["content"])
         
-        kb_docs_content = []
+        kb_docs_structured = []
         if session.get("kb"):
             for doc in session["kb"]:
                 if isinstance(doc, dict) and doc.get("content"):
-                    kb_docs_content.append(doc["content"])
+                    kb_docs_structured.append({
+                        "id": doc.get("id"),
+                        "filename": doc.get("filename"),
+                        "content": doc["content"],
+                        "file_type": doc.get("file_type"),
+                        "size": doc.get("size")
+                    })
         
         print(f"=== DOCUMENT CONTENT ===")
         print(f"Uploaded docs count: {len(uploaded_docs_content)}")
-        print(f"KB docs count: {len(kb_docs_content)}")
+        print(f"KB docs count: {len(kb_docs_structured)}")
         print(f"Uploaded docs content length: {sum(len(doc) for doc in uploaded_docs_content)}")
-        print(f"KB docs content length: {sum(len(doc) for doc in kb_docs_content)}")
+        print(f"KB docs content length: {sum(len(doc) for doc in kb_docs_structured)}")
         new_uploaded_docs_content = []
         if session.get("new_uploaded_docs"):
             for doc in session["new_uploaded_docs"]:
@@ -293,7 +299,7 @@ async def stream_chat(session_id: str, request: ChatRequest):
             doc=uploaded_docs_content,
             new_uploaded_docs=new_uploaded_docs_content,
             gpt_config=gpt_config,
-            kb={"text": kb_docs_content} if kb_docs_content else None,
+            kb=kb_docs_structured,
             web_search=request.web_search,  
             rag=request.rag, 
             deep_search=request.deep_search,  

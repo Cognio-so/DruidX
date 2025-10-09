@@ -41,6 +41,18 @@ def load_base_prompt() -> str:
 base_rag_prompt = load_base_prompt()
 
 BM25_INDICES = {}
+async def send_status_update(state: GraphState, message: str, progress: int = None):
+    """Send status update if callback is available"""
+    if hasattr(state, '_status_callback') and state._status_callback:
+        await state._status_callback({
+            "type": "status",
+            "data": {
+                "status": "processing",
+                "message": message,
+                "current_node": "RAG",
+                "progress": progress
+            }
+        })
 async def retreive_docs(doc: List[str], name: str, is_hybrid: bool= False):
     EMBEDDING_MODEL = OpenAIEmbeddings(model="text-embedding-3-small")
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
@@ -396,6 +408,49 @@ Scenario 3: GPT = "General Assistant" (KB has random knowledge)
             "reasoning": "Fallback due to parsing error"
         }
 
+async def _process_user_docs(state, docs, user_query, rag):
+    await send_status_update(state, "📚 Processing user documents...", 30)
+    await retreive_docs(docs, "doc_collection", is_hybrid=rag)
+    await send_status_update(state, "🔍 Searching user documents...", 50)
+    if rag:
+        res = await _hybrid_search_rrf("doc_collection", user_query, limit=6, k=60)
+    else:
+        res = await _search_collection("doc_collection", user_query, limit=6)
+    print(f"[RAG] Retrieved {len(res)} chunks from user docs")
+    return ("user", res)
+
+async def _process_kb_docs(state, kb_docs, user_query, rag):
+    await send_status_update(state, "📖 Processing knowledge base...", 60)
+    if isinstance(kb_docs, dict) and "text" in kb_docs:
+        kb_texts = kb_docs["text"]
+    elif isinstance(kb_docs, list):
+        # Handle new structured format with metadata
+        kb_texts = []
+        for doc in kb_docs:
+            if isinstance(doc, dict) and "content" in doc:
+                # Include filename and content
+                filename = doc.get("filename", "Unknown")
+                file_type = doc.get("file_type", "")
+                content = doc["content"]
+                
+                # Format with document metadata
+                formatted_content = f"[Document: {filename} ({file_type})]\n{content}"
+                kb_texts.append(formatted_content)
+            elif hasattr(doc, "content"):
+                kb_texts.append(doc.content)
+            else:
+                kb_texts.append(str(doc))
+    else:
+        kb_texts = [str(kb_docs)]
+
+    await retreive_docs(kb_texts, "kb_collection", is_hybrid=rag)
+    await send_status_update(state, "🔍 Searching knowledge base...", 70)
+    if rag:
+        res = await _hybrid_search_intersection("kb_collection", user_query, limit=6)
+    else:
+        res = await _hybrid_search_rrf("kb_collection", user_query, limit=6, k=60)
+    print(f"[RAG] Retrieved {len(res)} chunks from KB")
+    return ("kb", res)
 
 async def Rag(state: GraphState) -> GraphState:
     llm_model = state.get("llm_model", "gpt-4o-mini")
@@ -410,11 +465,12 @@ async def Rag(state: GraphState) -> GraphState:
     temperature = gpt_config.get("temperature", 0.0)
 
     print(f"[RAG] Processing query: {user_query}")
-    
+        # Status: Analyzing query
+    await send_status_update(state, "🧠 Analyzing query and selecting sources...", 10)
     # ==================== SMART SOURCE SELECTION ====================
     has_user_docs = bool(docs)
     has_kb = bool(kb_docs)
-    
+    # print(f"kb-------------", kb_docs)
     source_decision = await intelligent_source_selection(
         user_query=user_query,
         has_user_docs=has_user_docs,
@@ -435,32 +491,26 @@ async def Rag(state: GraphState) -> GraphState:
     kb_result = []
     
     # Only retrieve from user docs if decision says so
-    if use_user_docs and docs:
-        await retreive_docs(docs, "doc_collection", is_hybrid=rag)
-        if rag:
-            user_result = await _hybrid_search_rrf("doc_collection", user_query, limit=6, k=60)
-        else:    
-            user_result = await _search_collection("doc_collection", user_query, limit=6)
-        print(f"[RAG] Retrieved {len(user_result)} chunks from user docs")
-    
-    # Only retrieve from KB if decision says so
-    if use_kb and kb_docs:
-        kb_texts = []
-        if isinstance(kb_docs, dict) and "text" in kb_docs:
-            kb_texts = kb_docs["text"]
-        elif isinstance(kb_docs, list):
-            kb_texts = [d.content if hasattr(d, "content") else str(d) for d in kb_docs]
-        else:
-            kb_texts = [str(kb_docs)]
+    tasks = []
 
-        await retreive_docs(kb_texts, "kb_collection", is_hybrid=rag)
-        if rag:
-            kb_result = await _hybrid_search_intersection("kb_collection", user_query, limit=6)
-        else:    
-            kb_result = await _hybrid_search_rrf("kb_collection", user_query, limit=6, k=60)
-        print(f"[RAG] Retrieved {len(kb_result)} chunks from KB")
+    if use_user_docs and docs:
+        tasks.append(asyncio.create_task(_process_user_docs(state, docs, user_query, rag)))
+
+    if use_kb and kb_docs:
+        tasks.append(asyncio.create_task(_process_kb_docs(state, kb_docs, user_query, rag)))
+
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    user_result, kb_result = [], []
+    for r in results:
+        if isinstance(r, tuple) and len(r) == 2:
+            if r[0] == "user":
+                user_result = r[1]
+            elif r[0] == "kb":
+                kb_result = r[1]
 
     # ==================== BUILD ENHANCED CONTEXT ====================
+    await send_status_update(state, "🔗 Combining information from sources...", 80)
     ctx = state.get("context") or {}
     sess = ctx.get("session") or {}
     summary = sess.get("summary", "")
@@ -522,6 +572,7 @@ async def Rag(state: GraphState) -> GraphState:
     ]
     
     # ==================== GENERATE RESPONSE ====================
+    await send_status_update(state, "🤖 Generating response from retrieved information...", 90)
     llm = ChatOpenAI(model="gpt-5-mini", temperature=temperature)
     ai_response = await llm.ainvoke(final_messages)
     
@@ -539,4 +590,6 @@ async def Rag(state: GraphState) -> GraphState:
     })
     
     print(f"[RAG] Response generated using {len(user_result)} user docs, {len(kb_result)} KB chunks")
+        # Status: Complete
+    await send_status_update(state, "✅ RAG processing completed", 100)
     return state

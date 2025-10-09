@@ -2,7 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useTransition } from "react";
+import { useTransition, useRef } from "react";
 import { Loader2, Sparkle } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -30,13 +30,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-import { ImageUploader } from "./ImageUploader";
+import { ImageUploader } from "../../../create-gpt/_components/ImageUploader";
 import { RichTextEditor } from "@/components/rich-text-editor/Editor";
-import DocsUploader from "./DocsUploader";
-import { PreviewGpt } from "./preview-gpt";
+import DocsUploader from "../../../create-gpt/_components/DocsUploader";
+import { PreviewGpt } from "../../../create-gpt/_components/preview-gpt";
 import { GptFormValues, gptSchema } from "@/lib/zodSchema";
-import { createGpt } from "../action";
-import McpSchemaField from "./McpSchemaFeild";
+import { editGpt } from "../action";
+import McpSchemaField from "../../../create-gpt/_components/McpSchemaFeild";
 
 const GptModels = [
   {
@@ -53,23 +53,41 @@ const GptModels = [
   },
 ];
 
-export function CreateGptForm() {
+interface EditGptFormProps {
+  gptId: string;
+  initialData: {
+    id: string;
+    name: string;
+    description: string;
+    model: string;
+    instruction: string;
+    webBrowser: boolean;
+    hybridRag: boolean;
+    mcp: boolean;
+    mcpSchema: string;
+    image: string;
+    docs: string[];
+  };
+}
+
+export function EditGptForm({ gptId, initialData }: EditGptFormProps) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const isSubmittingRef = useRef(false);
 
   const form = useForm<GptFormValues>({
     resolver: zodResolver(gptSchema),
     defaultValues: {
-      gptName: "",
-      gptDescription: "",
-      model: "gpt-4",
-      instructions: "",
-      webSearch: false,
-      hybridRag: false, // Added default value
-      mcp: false,
-      docs: [],
-      imageUrl: "",
-      mcpSchema: "",
+      gptName: initialData.name,
+      gptDescription: initialData.description,
+      model: initialData.model as "gpt-4" | "gpt-4o" | "gpt-5",
+      instructions: initialData.instruction,
+      webSearch: initialData.webBrowser,
+      hybridRag: initialData.hybridRag,
+      mcp: initialData.mcp,
+      docs: initialData.docs,
+      imageUrl: initialData.image !== "default-avatar.png" ? initialData.image : "",
+      mcpSchema: initialData.mcpSchema,
     },
   });
 
@@ -77,20 +95,28 @@ export function CreateGptForm() {
   const formData = form.watch();
 
   const onSubmit = async (data: GptFormValues) => {
+    // Prevent double submission
+    if (isSubmittingRef.current || isPending) {
+      return;
+    }
+
+    isSubmittingRef.current = true;
+
     startTransition(async () => {
       try {
-        const result = await createGpt(data);
+        const result = await editGpt({ ...data, id: gptId });
         
         if (result.success) {
-          toast.success(result.message || "GPT created successfully!");
-          form.reset(); 
+          toast.success(result.message || "GPT updated successfully!");
           router.push('/admin/gpts');
         } else {
-          toast.error(result.error || "Failed to create GPT");
+          toast.error(result.error || "Failed to update GPT");
         }
       } catch (error) {
         console.error("Form submission error:", error);
         toast.error("An unexpected error occurred. Please try again.");
+      } finally {
+        isSubmittingRef.current = false;
       }
     });
   };
@@ -294,7 +320,7 @@ export function CreateGptForm() {
                   ) : (
                     <Sparkle className="size-4" />
                   )}
-                  {isPending ? "Creating GPT..." : "Create GPT"}
+                  {isPending ? "Updating GPT..." : "Update GPT"}
                 </Button>
               </div>
             </TabsContent>

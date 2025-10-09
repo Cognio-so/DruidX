@@ -1,3 +1,7 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -24,9 +28,12 @@ import {
   MoreHorizontal,
   Pencil,
   Trash,
+  Loader2,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { toast } from "sonner";
+import { deleteGptbyId } from "../action";
 
 const modelDisplayNames = {
   gpt_4o: "GPT-4o",
@@ -39,6 +46,26 @@ interface GptCardProps {
 }
 
 export function GptCard({ gpt }: GptCardProps) {
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
+  const handleDelete = () => {
+    startTransition(async () => {
+      try {
+        const result = await deleteGptbyId(gpt.id);
+        if (result.success) {
+          toast.success("GPT deleted successfully");
+          router.refresh();
+        } else {
+          toast.error(result.message || "Failed to delete GPT");
+        }
+      } catch (error) {
+        console.error("Delete error:", error);
+        toast.error("Failed to delete GPT");
+      }
+    });
+  };
+
   return (
     <Card className="relative">
       <CardHeader className="pb-3">
@@ -83,11 +110,17 @@ export function GptCard({ gpt }: GptCardProps) {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href={`/admin/gpts/${gpt.id}/delete`}>
-                  <Trash className="size-4 mr-2 text-destructive" />
-                  Delete GPT
-                </Link>
+              <DropdownMenuItem 
+                onClick={handleDelete}
+                className="text-destructive"
+                disabled={isPending}
+              >
+                {isPending ? (
+                  <Loader2 className="size-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash className="size-4 mr-2" />
+                )}
+                Delete GPT
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

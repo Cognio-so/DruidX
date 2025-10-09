@@ -29,7 +29,6 @@ except Exception as e:
 
 VECTOR_SIZE = 1536
 import aiofiles
-# Load the base RAG prompt
 prompt_path = os.path.join(os.path.dirname(__file__), "Rag.md")
 def load_base_prompt() -> str:
     path = os.path.join(os.path.dirname(__file__), "Rag.md")
@@ -258,41 +257,194 @@ def create_combined_system_prompt(custom_prompt: str, base_prompt: str) -> str:
     
     return combined_prompt
 
+async def intelligent_source_selection(
+    user_query: str,
+    has_user_docs: bool,
+    has_kb: bool,
+    custom_prompt: str = "",
+    llm_model: str = "gpt-4o-mini"
+) -> Dict[str, Any]:
+    """
+    Use LLM to intelligently decide which knowledge sources to use.
+    
+    Returns:
+        {
+            "use_user_docs": bool,
+            "use_kb": bool,
+            "search_strategy": str,  # "user_only", "kb_only", "both", "none"
+            "reasoning": str
+        }
+    """
+    
+    classification_prompt = f"""You are a query routing expert. Analyze the user's query and decide which knowledge sources to use.
+
+Available Sources:
+- User Documents: {'Available' if has_user_docs else 'Not available'}
+- Knowledge Base (KB): {'Available' if has_kb else 'Not available'}
+
+Custom GPT Purpose/Instructions:
+{custom_prompt if custom_prompt else 'No specific purpose defined'}
+
+User Query: "{user_query}"
+
+**ABSOLUTE PRIORITY RULE: USER QUERY INTENT > CUSTOM GPT PURPOSE**
+
+The user's explicit query intent ALWAYS determines source selection.
+
+**Understanding Knowledge Base (KB) Role:**
+KB provides domain-specific knowledge (standards, concepts, terminology, best practices).
+**CRITICAL**: Only use KB if it's RELEVANT to the user's document and query.
+
+**How to use Custom GPT Purpose:**
+- Use it to understand what DOMAIN the KB covers (e.g., "resume evaluation", "code review", "medical analysis")
+- Check if user's document and query are related to this domain
+- If user doc is in same domain as KB → KB might be relevant
+- If user doc is unrelated to KB domain → KB is NOT relevant
+
+**Decision Rules:**
+
+1. **User Documents Only** - Use when:
+   - **Simple extraction**: "Summarize", "List points", "Extract information"
+   - **Explanation of self-contained content**: "Explain this" when document is self-explanatory
+   - User wants information FROM the document without needing external knowledge
+   - Default choice unless KB is clearly needed
+
+2. **Both Sources (User Docs + KB)** - Use ONLY when KB is RELEVANT:
+   
+   **For Interpretation/Explanation queries** ("Explain", "What does this mean", "Help understand"):
+   - First check: Is KB topic-related to user's document?
+   - If YES and query needs domain knowledge → use both
+   - If NO or document is self-explanatory → use user doc only
+   - Examples where KB helps:
+     * User doc is code + KB has programming knowledge → both
+     * User doc is resume + KB has job requirements → both
+     * User doc is contract + KB has legal terms → both
+   - Examples where KB NOT needed:
+     * User doc is a story + KB has technical specs → user only
+     * Document already explains itself clearly → user only
+   
+   **For Evaluation queries** ("Check", "Review", "Validate", "Does this meet"):
+   - Use both if KB has relevant standards/requirements
+   - Otherwise user doc only
+   
+   **For Contextual Q&A** ("Answer based on this", "Using this document"):
+   - Use both only if KB enhances understanding of document's domain
+   - Otherwise user doc only
+
+3. **Knowledge Base Only** - Use when:
+   - Query about general knowledge without user document
+   - "What are best practices", "Tell me about X"
+
+4. **None** - Use when:
+   - Greetings, casual conversation
+
+Respond in JSON format:
+{{
+    "use_user_docs": true/false,
+    "use_kb": true/false,
+    "search_strategy": "user_only" | "kb_only" | "both" | "none",
+    "reasoning": "Brief explanation focusing on query intent"
+}}
+
+**Examples with Custom GPT Context:**
+
+Scenario 1: GPT = "Resume Evaluator" (KB has job requirements)
+- "give summary" → **user_only** (extraction only)
+- "explain this resume" → **both** (KB relevant - has job context to interpret resume)
+- "explain this story" → **user_only** (KB NOT relevant - story ≠ resume domain)
+- "check this resume" → **both** (evaluation + KB relevant)
+
+Scenario 2: GPT = "Code Reviewer" (KB has programming best practices)
+- "summarize this code" → **user_only** (extraction)
+- "explain this function" → **both** (KB relevant - has programming knowledge)
+- "explain this essay" → **user_only** (KB NOT relevant - essay ≠ code domain)
+- "review this code" → **both** (evaluation + KB relevant)
+
+Scenario 3: GPT = "General Assistant" (KB has random knowledge)
+- "explain this" → **user_only** (KB domain unclear, default to user doc)
+- "check against standards" → **both** (explicit evaluation request)
+
+**Key principle**: 
+1. Check query intent (summary vs explanation vs evaluation)
+2. Use Custom GPT Purpose to understand KB domain
+3. Check if user doc is in same domain as KB
+4. Default to user_only unless KB is clearly relevant
+"""
+
+    llm = ChatOpenAI(model="gpt-5-nano", temperature=0)
+    response = await llm.ainvoke([HumanMessage(content=classification_prompt)])
+    
+    try:
+        import json
+        result = json.loads(response.content)
+        
+        # Validate against availability
+        if not has_user_docs:
+            result["use_user_docs"] = False
+        if not has_kb:
+            result["use_kb"] = False
+            
+        print(f"[SMART-ROUTING] Strategy: {result['search_strategy']} | Reasoning: {result['reasoning']}")
+        return result
+        
+    except Exception as e:
+        print(f"[SMART-ROUTING] Parse error: {e}, defaulting to all available sources")
+        return {
+            "use_user_docs": has_user_docs,
+            "use_kb": has_kb,
+            "search_strategy": "both" if (has_user_docs and has_kb) else "user_only" if has_user_docs else "kb_only",
+            "reasoning": "Fallback due to parsing error"
+        }
+
+
 async def Rag(state: GraphState) -> GraphState:
     llm_model = state.get("llm_model", "gpt-4o-mini")
     user_query = state.get("resolved_query") or state.get("user_query", "")
-
     messages = state.get("messages", [])
     websearch = state.get("web_search", False)    
     kb_docs = state.get("kb", {})
     docs = state.get("active_docs", [])
-    # print(f" user doc", {docs})
-    rag=state.get("rag", False)
+    rag = state.get("rag", False)
     gpt_config = state.get("gpt_config", {})
     custom_system_prompt = gpt_config.get("instruction", "")
-    temperature = gpt_config.get("temperature", 0.0)   
+    temperature = gpt_config.get("temperature", 0.0)
 
-    combined_system_prompt = create_combined_system_prompt(custom_system_prompt, base_rag_prompt)
-   
     print(f"[RAG] Processing query: {user_query}")
-    print(f"[RAG] Web search enabled: {websearch}")
-    # if docs:
-    #     print(f" doccccc..... user", docs)
+    
+    # ==================== SMART SOURCE SELECTION ====================
+    has_user_docs = bool(docs)
+    has_kb = bool(kb_docs)
+    
+    source_decision = await intelligent_source_selection(
+        user_query=user_query,
+        has_user_docs=has_user_docs,
+        has_kb=has_kb,
+        custom_prompt=custom_system_prompt,
+        llm_model=llm_model
+    )
+    
+    use_user_docs = source_decision["use_user_docs"]
+    use_kb = source_decision["use_kb"]
+    strategy = source_decision["search_strategy"]
+    
+    print(f"[RAG] Using strategy: {strategy}")
+    print(f"[RAG] User Docs: {use_user_docs}, KB: {use_kb}")
+    
+    # ==================== CONDITIONAL RETRIEVAL ====================
     user_result = []
     kb_result = []
     
-    
-    if docs:
-    
+    # Only retrieve from user docs if decision says so
+    if use_user_docs and docs:
         await retreive_docs(docs, "doc_collection", is_hybrid=rag)
         if rag:
-            
             user_result = await _hybrid_search_rrf("doc_collection", user_query, limit=6, k=60)
         else:    
-           
             user_result = await _search_collection("doc_collection", user_query, limit=6)
-        
-    if kb_docs:
+        print(f"[RAG] Retrieved {len(user_result)} chunks from user docs")
+    
+    # Only retrieve from KB if decision says so
+    if use_kb and kb_docs:
         kb_texts = []
         if isinstance(kb_docs, dict) and "text" in kb_docs:
             kb_texts = kb_docs["text"]
@@ -303,23 +455,16 @@ async def Rag(state: GraphState) -> GraphState:
 
         await retreive_docs(kb_texts, "kb_collection", is_hybrid=rag)
         if rag:
-            kb_result= await _hybrid_search_intersection("kb_collection",user_query, limit=6)
+            kb_result = await _hybrid_search_intersection("kb_collection", user_query, limit=6)
         else:    
-            kb_result =await _hybrid_search_rrf("kb_collection", user_query, limit=6, k=60)
+            kb_result = await _hybrid_search_rrf("kb_collection", user_query, limit=6, k=60)
+        print(f"[RAG] Retrieved {len(kb_result)} chunks from KB")
 
-    
-    print(f"[RAG] Got {len(user_result)} doc results, {len(kb_result)} KB results")
-
-    intermediate_results = state.get("intermediate_results", [])
-    previous_context = []
-    for item in intermediate_results:
-        previous_context.append(f"{item['node']}: {item['output']}")
-    context_str = "\n".join(previous_context) or "None"
-
-   
+    # ==================== BUILD ENHANCED CONTEXT ====================
     ctx = state.get("context") or {}
     sess = ctx.get("session") or {}
     summary = sess.get("summary", "")
+    
     last_turns = []
     for m in (state.get("messages") or []):
         role = (m.get("type") or m.get("role") or "").lower()
@@ -328,44 +473,70 @@ async def Rag(state: GraphState) -> GraphState:
             speaker = "User" if role in ("human", "user") else "Assistant"
             last_turns.append(f"{speaker}: {content}")
     last_3_text = "\n".join(last_turns[-3:]) or "None"
-    final_context_message = HumanMessage(content=f"""
-CONVERSATION CONTEXT:
-Summary: {summary if summary else 'None'}
-Last Turns:
-{last_3_text}
 
-USER QUERY:
-{user_query}
+    # Build context message with source routing info
+    context_parts = [f"CONVERSATION CONTEXT:\nSummary: {summary if summary else 'None'}\nLast Turns:\n{last_3_text}"]
+    context_parts.append(f"\nUSER QUERY:\n{user_query}")
+    context_parts.append(f"\nSOURCE ROUTING DECISION:\nStrategy: {strategy}\nReasoning: {source_decision['reasoning']}")
+    
+    if user_result:
+        context_parts.append(f"\nUSER DOCUMENT CONTEXT:\n{chr(10).join(user_result)}")
+    
+    if kb_result:
+        context_parts.append(f"\nKNOWLEDGE BASE CONTEXT:\n{chr(10).join(kb_result)}")
+    
+    if not user_result and not kb_result:
+        context_parts.append("\nNO RETRIEVAL CONTEXT: Answer using general knowledge and conversation history.")
 
-PREVIOUS NODE OUTPUTS:
-{context_str}
+    final_context_message = HumanMessage(content="\n".join(context_parts))
 
-DOCUMENT CONTEXT:
-User Docs: {chr(10).join(user_result) if user_result else 'No user documents.'}
-Knowledge Base: {chr(10).join(kb_result) if kb_result else 'No KB entries.'}
+    # ==================== ENHANCED SYSTEM PROMPT ====================
+    enhanced_system_prompt = f"""{base_rag_prompt}
 
-INSTRUCTIONS:
-- Answer comprehensively using docs, KB, and previous node outputs
-- If the query is a follow-up (e.g., "more books"), continue from prior results
-- Structure the answer with clear headings
-- Provide sources if available
-""")
+---
+# CUSTOM GPT CONFIGURATION
+{custom_system_prompt if custom_system_prompt else 'No custom instructions provided.'}
+
+---
+# SOURCE-AWARE RESPONSE RULES
+
+**Critical Instructions:**
+- The system has intelligently selected which knowledge sources to use for this query
+- ONLY use the provided context sections in your response
+- If only User Document Context is provided: Focus exclusively on the user's documents
+- If only Knowledge Base Context is provided: Focus exclusively on standards/guidelines
+- If both are provided: Integrate both sources appropriately
+- If no retrieval context: Use general knowledge and conversation history
+
+**Output Formatting:**
+- For summaries: Use clear paragraphs with key points highlighted
+- For searches: Present findings with specific references
+- For comparisons: Use structured comparison format
+- For analysis: Provide detailed breakdown with clear sections
+- Always be direct and avoid meta-commentary about sources unless specifically asked
+"""
 
     final_messages = [
-        SystemMessage(content=combined_system_prompt),
+        SystemMessage(content=enhanced_system_prompt),
         final_context_message
     ]
     
-    # Generate final response
+    # ==================== GENERATE RESPONSE ====================
     llm = ChatOpenAI(model="gpt-5-mini", temperature=temperature)
     ai_response = await llm.ainvoke(final_messages)
+    
     state["messages"] = state.get("messages", []) + [ai_response.dict()]
     state["response"] = ai_response.content
     state.setdefault("intermediate_results", []).append({
-    "node": "RAG",
-    "query": user_query,
-    "output": state["response"]
-})
-    # print(f"[RAG] Final response generated with {len(user_result)} doc results, {len(kb_result)} KB results, {len(web_result)} web results")
+        "node": "RAG",
+        "query": user_query,
+        "strategy": strategy,
+        "sources_used": {
+            "user_docs": len(user_result),
+            "kb": len(kb_result)
+        },
+        "output": state["response"]
+    })
+    
+    print(f"[RAG] Response generated using {len(user_result)} user docs, {len(kb_result)} KB chunks")
     return state
-

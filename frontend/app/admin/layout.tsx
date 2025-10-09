@@ -12,7 +12,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <AppSidebar />
       <SidebarInset>
         <MobileHeader />
-        <main className="flex-1 overflow-hidden p-4">{children}</main>
+        <main className="flex-1 overflow-auto">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );

@@ -15,8 +15,7 @@ Your job is to analyze the user query and decide which capability is needed.
 - **WebSearch** → For any factual/informational query about the world, entities, events, people, science, laws, business, tech, etc.
   - Also when needing: "find other", "recommend", "alternatives", "similar", "latest news", "current info"
   - Looking up lists, facts, or information not in documents
-  
-- **MCP** → When the query explicitly requires tool calls, actions, or function execution.
+
 
 - **image**-> When the query explicilty ask or mention to generate or create image or pic.
 

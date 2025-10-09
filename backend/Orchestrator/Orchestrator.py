@@ -178,15 +178,15 @@ Rewritten Query:"""
     else:
         prompt = f"""
 You are a query rewriter for a multi-step AI agent. Your task is to formulate a precise query for the *next* step in a plan, using the context from previous steps.
-
+** Write only short and precise  query only less than 300 word. Donot add extra thing in query , for next node what is needed add that thing from the previous nodes result in query.
 **Original User Goal:**
 {user_query}
 
 **Full Execution Plan:**
 {plan}
 
-**Previous Step ('{last_result.get('node')}') Result:**
-{last_result.get('output')}
+**Gathered_information:**
+{state.get("intermediate_results")}
 
 ---
 
@@ -248,6 +248,7 @@ async def orchestrator(state: GraphState) -> GraphState:
     new_Doc=state.get("new_uploaded_docs", [])
     if not state.get("tasks"):
         result = await analyze_query(user_query, prompt_template, llm_model)
+    
     print(f"Rag.................", rag)
     print(f"Deep[research-------------", deep_search)
 

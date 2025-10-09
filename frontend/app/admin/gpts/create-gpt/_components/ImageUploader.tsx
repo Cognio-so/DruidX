@@ -133,7 +133,6 @@ export function ImageUploader({ value, onChange }: ImageUploaderProps) {
         await deleteFromS3(preview);
       } catch (error) {
         console.error("Delete error:", error);
-        // Continue with removal even if delete fails
       }
     }
     

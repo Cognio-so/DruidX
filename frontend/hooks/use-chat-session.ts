@@ -84,7 +84,7 @@ export function useChatSession(): ChatSessionHook {
       console.log('📤 Sending GPT config to backend:', gptConfig);
       
       // Check if backend is available
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+      const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
       
       try {
         // Set GPT config in session
@@ -165,7 +165,7 @@ export function useChatSession(): ChatSessionHook {
 
     try {
       console.log('📤 Uploading user document:', { fileUrl, filename });
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+      const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
       
       // Send user document to backend
       const response = await fetch(`${backendUrl}/api/sessions/${sessionId}/add-documents`, {

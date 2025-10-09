@@ -312,16 +312,16 @@ async def orchestrator(state: GraphState) -> GraphState:
             state["resolved_query"] = clean_query
 
         else: 
-            # if len(state["tasks"]) > 1:
+            if len(state["tasks"]) > 1:
                 print(f"--- Multi-step plan ({len(state['tasks'])} steps) finished, routing to Synthesizer ---")
                 route = "AnswerSynthesizer"
-            # else:
-            #     print(f"--- Single-step plan finished, ending directly ---")
-            #     if state.get("intermediate_results"):
-            #         state["final_answer"] = state["intermediate_results"][-1]["output"]
-            #     else: 
-            #         state["final_answer"] = state.get("response", "Task completed.")
-            #     route = "END"
+            else:
+                print(f"--- Single-step plan finished, ending directly ---")
+                if state.get("intermediate_results"):
+                    state["final_answer"] = state["intermediate_results"][-1]["output"]
+                else: 
+                    state["final_answer"] = state.get("response", "Task completed.")
+                route = "END"
         state["route"] = route
 
 

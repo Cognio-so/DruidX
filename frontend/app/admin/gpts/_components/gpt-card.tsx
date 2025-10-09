@@ -67,12 +67,12 @@ export function GptCard({ gpt }: GptCardProps) {
   };
 
   return (
-    <Card className="relative">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-3">
+    <Card className="relative h-full flex flex-col overflow-hidden">
+      <CardHeader className="pb-3 flex-shrink-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             {/* Avatar */}
-            <div className="relative w-12 h-12">
+            <div className="relative w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
               {gpt.image && gpt.image !== "default-avatar.png" ? (
                 <Image
                   src={gpt.image}
@@ -81,15 +81,15 @@ export function GptCard({ gpt }: GptCardProps) {
                   className="rounded-full object-cover border-2 border-gray-200"
                 />
               ) : (
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                  <Bot className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                  <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
               )}
             </div>
 
-            {/* Name and Status */}
-            <div>
-              <CardTitle className="text-xl font-semibold">
+            {/* Name */}
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-lg sm:text-xl font-semibold truncate leading-tight">
                 {gpt.name}
               </CardTitle>
             </div>
@@ -98,14 +98,18 @@ export function GptCard({ gpt }: GptCardProps) {
           {/* Three-dot dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant={"ghost"} size="icon">
-                <MoreHorizontal className="size-4" />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10"
+              >
+                <MoreHorizontal className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem asChild>
                 <Link href={`/admin/gpts/${gpt.id}/edit`}>
-                  <Pencil className="size-4 mr-2" />
+                  <Pencil className="w-4 h-4 mr-2" />
                   Edit GPT
                 </Link>
               </DropdownMenuItem>
@@ -116,9 +120,9 @@ export function GptCard({ gpt }: GptCardProps) {
                 disabled={isPending}
               >
                 {isPending ? (
-                  <Loader2 className="size-4 mr-2 animate-spin" />
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
-                  <Trash className="size-4 mr-2" />
+                  <Trash className="w-4 h-4 mr-2" />
                 )}
                 Delete GPT
               </DropdownMenuItem>
@@ -127,36 +131,58 @@ export function GptCard({ gpt }: GptCardProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0">
-        <CardDescription className="mb-4">{gpt.description}</CardDescription>
+      <CardContent className="pt-0 flex-1 flex flex-col">
+        <CardDescription className="mb-4 text-sm sm:text-base line-clamp-3 flex-shrink-0">
+          {gpt.description}
+        </CardDescription>
 
-        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-1">
-              <Calendar className="w-4 h-4 text-blue-600" />
-              <span>{new Date(gpt.createdAt).toLocaleDateString("en-GB")}</span>
-            </div>
+        {/* Single horizontal line for calendar, icons, and GPT model */}
+        <div className="flex items-center justify-between text-xs sm:text-sm text-gray-500 mb-4 flex-shrink-0">
+          <div className="flex items-center gap-1">
+            <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
+            <span className="truncate">
+              {new Date(gpt.createdAt).toLocaleDateString("en-GB")}
+            </span>
           </div>
-          <div className="flex items-center space-x-4">
-            {gpt.webBrowser && <Globe className="w-4 h-4 text-green-600" />}
-            {gpt.hybridRag && <FileSearch  className="w-4 h-4 text-purple-600" />}
-            {gpt.mcp && <CircuitBoard className="w-4 h-4 text-orange-600" />}
-            <span className="text-purple-500">
+          
+          <div className="flex items-center gap-2 sm:gap-3">
+            {gpt.webBrowser && (
+              <div className="flex items-center gap-1">
+                <Globe className="w-3 h-3 sm:w-4 sm:h-4 text-green-600 flex-shrink-0" />
+                <span className="hidden sm:inline text-xs">Web</span>
+              </div>
+            )}
+            {gpt.hybridRag && (
+              <div className="flex items-center gap-1">
+                <FileSearch className="w-3 h-3 sm:w-4 sm:h-4 text-purple-600 flex-shrink-0" />
+                <span className="hidden sm:inline text-xs">RAG</span>
+              </div>
+            )}
+            {gpt.mcp && (
+              <div className="flex items-center gap-1">
+                <CircuitBoard className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600 flex-shrink-0" />
+                <span className="hidden sm:inline text-xs">MCP</span>
+              </div>
+            )}
+            <span className="text-purple-500 font-medium text-xs sm:text-sm">
               {modelDisplayNames[gpt.model] || gpt.model}
             </span>
           </div>
         </div>
 
-        <Link
-          href={`/admin/gpts/${gpt.id}/chat`}
-          className={buttonVariants({
-            variant: "default",
-            className: "w-full",
-          })}
-        >
-          <MessageCircle className="mr-2 w-4 h-4" />
-          Start Chat
-        </Link>
+        {/* Start Chat Button */}
+        <div className="mt-auto">
+          <Link
+            href={`/admin/gpts/${gpt.id}/chat`}
+            className={buttonVariants({
+              variant: "default",
+              className: "w-full text-sm sm:text-base",
+            })}
+          >
+            <MessageCircle className="mr-2 w-4 h-4" />
+            Start Chat
+          </Link>
+        </div>
       </CardContent>
     </Card>
   );

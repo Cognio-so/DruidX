@@ -35,7 +35,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"],
+    allow_origins=["http://localhost:3000","https://emsa-gpt.vercel.app" ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -134,6 +134,7 @@ async def set_gpt_config(session_id: str, gpt_config: dict):
     """Set GPT configuration for a session"""
     session = SessionManager.get_session(session_id)
     session["gpt_config"] = gpt_config
+    # print(f"gpt config..........." , gpt_config)
     SessionManager.update_session(session_id, session)
     return {"message": "GPT configuration updated", "gpt_config": gpt_config}
 

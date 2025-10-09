@@ -269,11 +269,11 @@ async def Rag(state: GraphState) -> GraphState:
     # print(f" user doc", {docs})
     rag=state.get("rag", False)
     gpt_config = state.get("gpt_config", {})
-    custom_system_prompt = gpt_config.get("system_prompt", "")
+    custom_system_prompt = gpt_config.get("instruction", "")
     temperature = gpt_config.get("temperature", 0.0)   
 
     combined_system_prompt = create_combined_system_prompt(custom_system_prompt, base_rag_prompt)
-    
+   
     print(f"[RAG] Processing query: {user_query}")
     print(f"[RAG] Web search enabled: {websearch}")
     # if docs:
@@ -357,7 +357,7 @@ INSTRUCTIONS:
     ]
     
     # Generate final response
-    llm = ChatOpenAI(model="gpt-5-nano", temperature=temperature)
+    llm = ChatOpenAI(model="gpt-5-mini", temperature=temperature)
     ai_response = await llm.ainvoke(final_messages)
     state["messages"] = state.get("messages", []) + [ai_response.dict()]
     state["response"] = ai_response.content

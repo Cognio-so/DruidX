@@ -134,6 +134,7 @@ async def set_gpt_config(session_id: str, gpt_config: dict):
     """Set GPT configuration for a session"""
     session = SessionManager.get_session(session_id)
     session["gpt_config"] = gpt_config
+    # print(f"gpt config..........." , gpt_config)
     SessionManager.update_session(session_id, session)
     return {"message": "GPT configuration updated", "gpt_config": gpt_config}
 

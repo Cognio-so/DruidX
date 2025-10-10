@@ -1,8 +1,5 @@
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
-import {
-  SidebarProvider,
-  SidebarInset,
-} from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { MobileHeader } from "@/components/mobile-header";
 import { ReactNode } from "react";
 

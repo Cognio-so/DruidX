@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+const BACKEND_URL = process.env.BACKEND_URL;
 
 export async function POST() {
   try {
     const response = await fetch(`${BACKEND_URL}/api/sessions`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
@@ -18,9 +18,9 @@ export async function POST() {
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Session creation error:', error);
+    console.error("Session creation error:", error);
     return NextResponse.json(
-      { error: 'Failed to create session' },
+      { error: "Failed to create session" },
       { status: 500 }
     );
   }

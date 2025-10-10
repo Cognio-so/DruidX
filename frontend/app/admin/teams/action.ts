@@ -2,7 +2,10 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { teamMemberUpdateSchema, teamMemberInviteSchema } from "@/lib/zodSchema";
+import {
+  teamMemberUpdateSchema,
+  teamMemberInviteSchema,
+} from "@/lib/zodSchema";
 
 export async function createInvitation(data: {
   email: string;
@@ -45,21 +48,24 @@ export async function createInvitation(data: {
   });
 
   const invitationToken = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${token}`;
-  
+
   try {
-    const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/teams/invite`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email,
-        name,
-        role,
-        message,
-        invitationToken,
-      }),
-    });
+    const emailResponse = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL}/api/teams/invite`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          name,
+          role,
+          message,
+          invitationToken,
+        }),
+      }
+    );
 
     if (!emailResponse.ok) {
       throw new Error("Failed to send invitation email");
@@ -75,11 +81,14 @@ export async function createInvitation(data: {
   return { success: true, invitation };
 }
 
-export async function updateUser(userId: string, data: {
-  name: string;
-  email: string;
-  role: string;
-}) {
+export async function updateUser(
+  userId: string,
+  data: {
+    name: string;
+    email: string;
+    role: string;
+  }
+) {
   const validatedFields = teamMemberUpdateSchema.safeParse(data);
 
   if (!validatedFields.success) {

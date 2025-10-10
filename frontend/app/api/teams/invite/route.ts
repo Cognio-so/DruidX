@@ -1,18 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server'
-import * as nodemailer from 'nodemailer'
+import { NextRequest, NextResponse } from "next/server";
+import * as nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
-  service: process.env.EMAIL_SERVICE || 'gmail',
+  service: process.env.EMAIL_SERVICE || "gmail",
   auth: {
-    user: process.env.GMAIL_USERNAME || '',
-    pass: process.env.GMAIL_PASSWORD || '',
+    user: process.env.GMAIL_USERNAME || "",
+    pass: process.env.GMAIL_PASSWORD || "",
   },
-})
+});
 
 const sender = {
-  email: process.env.GMAIL_USERNAME || '',
-  name: process.env.MAIL_SENDER_NAME || 'EMSA',
-}
+  email: process.env.GMAIL_USERNAME || "",
+  name: process.env.MAIL_SENDER_NAME || "EMSA",
+};
 
 const INVITATION_EMAIL_TEMPLATE = `
 <!DOCTYPE html>
@@ -42,51 +42,50 @@ const INVITATION_EMAIL_TEMPLATE = `
   </div>
 </body>
 </html>
-`
+`;
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, name, role, message, invitationToken } = await request.json()
+    const { email, name, role, message, invitationToken } =
+      await request.json();
 
     if (!email || !name || !role || !invitationToken) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: "Missing required fields" },
         { status: 400 }
-      )
+      );
     }
 
-    const subject = "Invitation to join EMSA"
-    const htmlBody = INVITATION_EMAIL_TEMPLATE
-      .replace('{name}', name)
-      .replace('{role}', role)
-      .replace('{message}', message || '')
-      .replace('{invitationToken}', invitationToken)
+    const subject = "Invitation to join EMSA";
+    const htmlBody = INVITATION_EMAIL_TEMPLATE.replace("{name}", name)
+      .replace("{role}", role)
+      .replace("{message}", message || "")
+      .replace("{invitationToken}", invitationToken);
 
     const mailOptions = {
       from: `"${sender.name}" <${sender.email}>`,
       to: email,
       subject: subject,
       html: htmlBody,
-      headers: { 'X-App-Category': 'Invitation Email' },
-    }
+      headers: { "X-App-Category": "Invitation Email" },
+    };
 
-    const info = await transporter.sendMail(mailOptions)
-    console.log(`Invitation email sent successfully to ${email}`)
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`Invitation email sent successfully to ${email}`);
 
     return NextResponse.json(
-      { 
-        success: true, 
-        message: 'Invitation sent successfully',
-        messageId: info.messageId
+      {
+        success: true,
+        message: "Invitation sent successfully",
+        messageId: info.messageId,
       },
       { status: 200 }
-    )
-
+    );
   } catch (error) {
-    console.error('Error sending invitation email:', error)
+    console.error("Error sending invitation email:", error);
     return NextResponse.json(
-      { error: 'Failed to send invitation email' },
+      { error: "Failed to send invitation email" },
       { status: 500 }
-    )
+    );
   }
 }

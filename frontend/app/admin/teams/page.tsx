@@ -5,7 +5,7 @@ import TeamsPageClient from "./_components/teams-page-client";
 
 async function TeamsTableWrapper() {
   const teamMembers = await getTeamMembers();
-  
+
   return (
     <>
       <Suspense fallback={<TeamsLoading />}>

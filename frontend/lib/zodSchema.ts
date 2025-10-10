@@ -11,7 +11,7 @@ export const gptSchema = z.object({
     .min(10, { message: "Description must be at least 10 characters long" })
     .max(300, { message: "Description must not exceed 300 characters" }),
 
-    model: z.enum(["gpt-4", "gpt-4o", "gpt-5"]).refine((val) => !!val, {
+  model: z.enum(["gpt-4", "gpt-4o", "gpt-5"]).refine((val) => !!val, {
     message: "Please select a model",
   }),
 
@@ -20,17 +20,17 @@ export const gptSchema = z.object({
     .min(20, { message: "Instructions must be at least 20 characters long" })
     .max(80000, { message: "Instructions must not exceed 80000 characters" }),
 
-  webSearch: z.boolean(), 
-  hybridRag: z.boolean(), // Added hybrid RAG field
-  mcp: z.boolean(), 
+  webSearch: z.boolean(),
+  hybridRag: z.boolean(),
+  mcp: z.boolean(),
 
   mcpSchema: z
     .string()
     .optional()
     .refine(
       (val) => {
-        if (!val || val.trim() === '') return true;
-        
+        if (!val || val.trim() === "") return true;
+
         try {
           JSON.parse(val);
           return true;
@@ -45,12 +45,11 @@ export const gptSchema = z.object({
     .array(z.string())
     .max(10, { message: "You can upload at most 10 documents" }),
 
-  imageUrl: z.string().optional(), 
+  imageUrl: z.string().optional(),
 });
 
 export type GptFormValues = z.infer<typeof gptSchema>;
 
-// Team member validation schemas
 export const teamMemberUpdateSchema = z.object({
   name: z
     .string()
@@ -60,8 +59,9 @@ export const teamMemberUpdateSchema = z.object({
     .string()
     .email({ message: "Please enter a valid email address" })
     .max(255, { message: "Email must not exceed 255 characters" }),
-  role: z
-    .enum(["admin", "user"], { message: "Role must be either admin or user" }),
+  role: z.enum(["admin", "user"], {
+    message: "Role must be either admin or user",
+  }),
 });
 
 export const teamMemberInviteSchema = z.object({
@@ -73,8 +73,9 @@ export const teamMemberInviteSchema = z.object({
     .string()
     .email({ message: "Please enter a valid email address" })
     .max(255, { message: "Email must not exceed 255 characters" }),
-  role: z
-    .enum(["admin", "user"], { message: "Role must be either admin or user" }),
+  role: z.enum(["admin", "user"], {
+    message: "Role must be either admin or user",
+  }),
   message: z
     .string()
     .max(500, { message: "Message must not exceed 500 characters" })

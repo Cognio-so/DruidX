@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+const BACKEND_URL = process.env.BACKEND_URL;
 
 export async function GET(
   request: NextRequest,
@@ -11,15 +11,15 @@ export async function GET(
 
     if (!sessionId) {
       return NextResponse.json(
-        { error: 'Session ID is required' },
+        { error: "Session ID is required" },
         { status: 400 }
       );
     }
 
     const response = await fetch(`${BACKEND_URL}/api/sessions/${sessionId}`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
@@ -30,9 +30,9 @@ export async function GET(
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Session fetch error:', error);
+    console.error("Session fetch error:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch session' },
+      { error: "Failed to fetch session" },
       { status: 500 }
     );
   }

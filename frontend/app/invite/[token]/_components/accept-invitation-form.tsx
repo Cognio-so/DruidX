@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Loader2, CheckCircle, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { acceptInvitation } from "@/app/admin/teams/action";
@@ -27,7 +33,9 @@ interface AcceptInvitationFormProps {
   invitation: Invitation;
 }
 
-export function AcceptInvitationForm({ invitation }: AcceptInvitationFormProps) {
+export function AcceptInvitationForm({
+  invitation,
+}: AcceptInvitationFormProps) {
   const router = useRouter();
   const [accepting, setAccepting] = useState(false);
 
@@ -40,7 +48,9 @@ export function AcceptInvitationForm({ invitation }: AcceptInvitationFormProps) 
         router.push("/login");
       }, 2000);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to accept invitation");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to accept invitation"
+      );
     } finally {
       setAccepting(false);
     }
@@ -51,23 +61,22 @@ export function AcceptInvitationForm({ invitation }: AcceptInvitationFormProps) 
       <CardHeader className="text-center">
         <UserPlus className="h-12 w-12 text-blue-500 mx-auto mb-4" />
         <CardTitle>You&apos;re Invited!</CardTitle>
-        <CardDescription>
-          You&apos;ve been invited to join EMSA
-        </CardDescription>
+        <CardDescription>You&apos;ve been invited to join EMSA</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-center space-y-2">
           <p className="font-medium">Hello {invitation.name}</p>
           <p className="text-sm text-muted-foreground">
-            You&apos;ve been invited to join as a <strong>{invitation.role}</strong>
+            You&apos;ve been invited to join as a{" "}
+            <strong>{invitation.role}</strong>
           </p>
           {invitation.message && (
             <p className="text-sm italic">&quot;{invitation.message}&quot;</p>
           )}
         </div>
-        
+
         <div className="space-y-2">
-          <Button 
+          <Button
             onClick={handleAcceptInvitation}
             disabled={accepting}
             className="w-full gap-2"
@@ -84,17 +93,18 @@ export function AcceptInvitationForm({ invitation }: AcceptInvitationFormProps) 
               </>
             )}
           </Button>
-          <Button 
-            onClick={() => router.push("/")} 
-            variant="outline" 
+          <Button
+            onClick={() => router.push("/")}
+            variant="outline"
             className="w-full"
           >
             Decline
           </Button>
         </div>
-        
+
         <p className="text-xs text-muted-foreground text-center">
-          This invitation expires on {new Date(invitation.expiresAt).toLocaleDateString()}
+          This invitation expires on{" "}
+          {new Date(invitation.expiresAt).toLocaleDateString()}
         </p>
       </CardContent>
     </Card>

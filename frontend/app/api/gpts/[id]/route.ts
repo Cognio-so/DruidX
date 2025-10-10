@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { requireUser } from '@/data/requireUser';
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import { requireUser } from "@/data/requireUser";
 
 export async function GET(
   request: NextRequest,
@@ -9,7 +9,7 @@ export async function GET(
   try {
     await requireUser();
 
-    const { id } = await params; // AWAIT the params
+    const { id } = await params;
 
     const gpt = await prisma.gpt.findUnique({
       where: { id },
@@ -31,17 +31,14 @@ export async function GET(
     });
 
     if (!gpt) {
-      return NextResponse.json(
-        { error: 'GPT not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "GPT not found" }, { status: 404 });
     }
 
     return NextResponse.json(gpt);
   } catch (error) {
-    console.error('Error fetching GPT:', error);
+    console.error("Error fetching GPT:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

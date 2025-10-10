@@ -13,8 +13,11 @@ export default async function Home() {
   if (session) {
     if (session.user.role === "admin") {
       return redirect("/admin");
-    } else {
+    }else if (session.user.role === "user") {
       return redirect("/dashboard");
+    }
+    else{
+      return redirect("/login");
     }
   }
 

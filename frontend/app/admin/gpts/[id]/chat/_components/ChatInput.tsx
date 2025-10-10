@@ -48,34 +48,21 @@ export default function ChatInput({
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Set default model when it's available
   useEffect(() => {
     if (defaultModel) {
-      console.log('🎯 ChatInput: Setting default model from GPT data:', defaultModel);
-      
-      // Check if the defaultModel exists in our models array
       const modelExists = models.find(model => model.value === defaultModel);
       if (modelExists) {
-        console.log('✅ Model found in models array, setting as selected:', defaultModel);
-        setSelectedModel(defaultModel);
-      } else {
-        console.warn('⚠️ Default model not found in models array:', defaultModel);
-        console.log('Available models:', models.map(m => m.value));
-        // Keep the current selectedModel if defaultModel is not valid
+          setSelectedModel(defaultModel);
       }
-    } else {
-      console.log('ℹ️ No defaultModel provided, using fallback:', selectedModel);
     }
   }, [defaultModel]);
 
   const handleModelChange = (value: string) => {
-    console.log('🔄 Model changed from', selectedModel, 'to', value);
     setSelectedModel(value);
   };
 
   const handleSend = () => {
     if (message.trim() && !isLoading) {
-      // Convert frontend model value to backend model name
       const backendModelName = frontendToBackend(selectedModel);
       
       const sendOptions = {
@@ -84,16 +71,8 @@ export default function ChatInput({
         deep_search: deepSearch,
         uploaded_doc: uploadedDocs.length > 0,
         uploaded_docs: uploadedDocs,
-        model: backendModelName, // Send backend model name
+        model: backendModelName, 
       };
-
-      console.log('📤 ChatInput: Sending message with options:', {
-        message: message.trim(),
-        frontendModel: selectedModel,
-        backendModel: backendModelName,
-        options: sendOptions,
-        timestamp: new Date().toISOString()
-      });
 
       onSendMessage(message.trim(), sendOptions);
       setMessage("");
@@ -166,7 +145,6 @@ export default function ChatInput({
       setUploadedDocs(prev => [...prev, newDoc]);
       onDocumentUploaded?.(fileUrl, file.name);
     } catch (error) {
-      console.error("Upload failed:", error);
       alert("Upload failed. Please try again.");
     } finally {
       setIsUploading(false);

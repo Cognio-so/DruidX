@@ -1,6 +1,6 @@
-"use server";
+  "use server";
 
-import { requireUser } from "@/data/requireUser";
+import { requireAdmin } from "@/data/requireAdmin";
 import prisma from "@/lib/prisma";
 import { gptSchema } from "@/lib/zodSchema";
 import { revalidatePath } from "next/cache";
@@ -44,7 +44,7 @@ const reverseModelMapping: Record<string, string> = {
 };
 
 export async function getGptById(id: string) {
-  const session = await requireUser();
+  const session = await requireAdmin();    
   
   if (!session?.user) {
     return {
@@ -114,7 +114,7 @@ export async function editGpt(data: {
   docs: string[];
   imageUrl?: string;
 }) {
-  const session = await requireUser();
+  const session = await requireAdmin();
 
   if (!session?.user) {
     return {

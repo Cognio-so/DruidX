@@ -71,7 +71,6 @@ export async function POST(request: NextRequest) {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log(`Invitation email sent successfully to ${email}`);
 
     return NextResponse.json(
       {

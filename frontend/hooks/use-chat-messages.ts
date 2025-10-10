@@ -32,13 +32,6 @@ export function useChatMessages(sessionId: string | null): ChatMessagesHook {
       return;
     }
 
-    console.log('🎯 ChatMessages: Sending message with options:', {
-      message,
-      options,
-      sessionId,
-      timestamp: new Date().toISOString()
-    });
-
     await sendMessage({
       message,
       ...options,

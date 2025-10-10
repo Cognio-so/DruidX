@@ -31,50 +31,31 @@ export default function ChatGptById() {
     const fetchGptData = async () => {
       try {
         if (gptId) {
-          console.log('🔍 Fetching GPT data for chat page, ID:', gptId);
           const response = await fetch(`/api/gpts/${gptId}`);
           if (response.ok) {
             const gpt = await response.json();
-            console.log('📋 GPT data loaded for chat page:', {
-              id: gpt.id,
-              name: gpt.name,
-              model: gpt.model,
-              description: gpt.description
-            });
             
-            // Validate that the model from database exists in our mapping
-            const modelInfo = getModelByFrontendValue(gpt.model);
-            if (modelInfo) {
-              console.log('✅ Model found in mapping:', modelInfo);
-            } else {
-              console.warn('⚠️ Model from database not found in mapping:', gpt.model);
-            }
             
+            const modelInfo = getModelByFrontendValue(gpt.model); 
             setGptData({
               id: gpt.id,
               name: gpt.name,
               image: gpt.image,
               description: gpt.description,
-              model: gpt.model // This is the frontend format from database
+              model: gpt.model 
             });
           } else {
-            console.error('❌ Failed to fetch GPT data:', response.status);
+            console.error('Failed to fetch GPT data:', response.status);
           }
         }
       } catch (error) {
-        console.error('❌ Failed to fetch GPT data:', error);
+        console.error('Failed to fetch GPT data:', error);
       }
     };
 
     fetchGptData();
   }, [gptId]);
 
-  // Debug log when gptData changes
-  useEffect(() => {
-    if (gptData) {
-      console.log('🎯 GPT data updated, model:', gptData.model);
-    }
-  }, [gptData]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">

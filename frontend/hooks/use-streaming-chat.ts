@@ -37,12 +37,6 @@ export function useStreamingChat(sessionId: string): StreamingChatHook {
       return;
     }
 
-    console.log('🚀 Starting chat request with data:', {
-      sessionId,
-      request,
-      timestamp: new Date().toISOString()
-    });
-
     setIsLoading(true);
     setError(null);
 
@@ -54,7 +48,6 @@ export function useStreamingChat(sessionId: string): StreamingChatHook {
       timestamp: new Date().toISOString(),
     };
 
-    console.log('📝 Adding user message:', userMessage);
     setMessages(prev => [...prev, userMessage]);
 
     // Create assistant message placeholder
@@ -67,7 +60,6 @@ export function useStreamingChat(sessionId: string): StreamingChatHook {
       isStreaming: true,
     };
 
-    console.log('🤖 Creating assistant message placeholder:', assistantMessage);
     setMessages(prev => [...prev, assistantMessage]);
 
     // Create abort controller for this request
@@ -79,16 +71,6 @@ export function useStreamingChat(sessionId: string): StreamingChatHook {
         ...request,
       };
 
-      console.log('📤 Sending request to backend:', {
-        url: '/api/chat/stream',
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: requestBody,
-        timestamp: new Date().toISOString()
-      });
-
       const response = await fetch(`/api/chat/stream`, {
         method: 'POST',
         headers: {
@@ -96,14 +78,6 @@ export function useStreamingChat(sessionId: string): StreamingChatHook {
         },
         body: JSON.stringify(requestBody),
         signal: abortControllerRef.current.signal,
-      });
-
-      console.log('📥 Received response from backend:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-        ok: response.ok,
-        timestamp: new Date().toISOString()
       });
 
       if (!response.ok) {
@@ -118,13 +92,10 @@ export function useStreamingChat(sessionId: string): StreamingChatHook {
       const decoder = new TextDecoder();
       let buffer = '';
 
-      console.log('🔄 Starting to read streaming response...');
-
       while (true) {
         const { done, value } = await reader.read();
         
         if (done) {
-          console.log('✅ Streaming completed');
           break;
         }
 
@@ -136,17 +107,9 @@ export function useStreamingChat(sessionId: string): StreamingChatHook {
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
-              console.log('📊 Received streaming data:', data);
               
               if (data.type === 'content' && data.data) {
                 const { content, full_response, is_complete } = data.data;
-                
-                console.log('📝 Updating message content:', {
-                  messageId: assistantMessageId,
-                  content: content,
-                  fullResponse: full_response,
-                  isComplete: is_complete
-                });
                 
                 setMessages(prev => prev.map(msg => 
                   msg.id === assistantMessageId 
@@ -158,7 +121,6 @@ export function useStreamingChat(sessionId: string): StreamingChatHook {
                     : msg
                 ));
               } else if (data.type === 'error') {
-                console.error('❌ Received error from backend:', data.data);
                 setError(data.data.error || 'An error occurred');
                 setMessages(prev => prev.map(msg => 
                   msg.id === assistantMessageId 
@@ -170,7 +132,6 @@ export function useStreamingChat(sessionId: string): StreamingChatHook {
                     : msg
                 ));
               } else if (data.type === 'done') {
-                console.log('🏁 Stream completed for message:', assistantMessageId);
                 setMessages(prev => prev.map(msg => 
                   msg.id === assistantMessageId 
                     ? {
@@ -181,16 +142,15 @@ export function useStreamingChat(sessionId: string): StreamingChatHook {
                 ));
               }
             } catch (parseError) {
-              console.error('❌ Error parsing SSE data:', parseError, 'Raw line:', line);
+              // Handle parse error silently
             }
           }
         }
       }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
-        console.log('⏹️ Request aborted');
+        // Request was aborted
       } else {
-        console.error('❌ Streaming error:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
         setMessages(prev => prev.map(msg => 
           msg.id === assistantMessageId 
@@ -203,14 +163,12 @@ export function useStreamingChat(sessionId: string): StreamingChatHook {
         ));
       }
     } finally {
-      console.log('🏁 Request completed, setting loading to false');
       setIsLoading(false);
       abortControllerRef.current = null;
     }
   }, [sessionId]);
 
   const clearMessages = useCallback(() => {
-    console.log('🗑️ Clearing all messages');
     setMessages([]);
     setError(null);
   }, []);

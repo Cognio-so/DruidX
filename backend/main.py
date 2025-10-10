@@ -12,7 +12,12 @@ import httpx
 from document_processor import extract_text_from_pdf, extract_text_from_docx, extract_text_from_txt, extract_text_from_json
 from graph import graph
 from graph_type import GraphState
-from streaming_graph import StreamingGraph
+# Remove this import
+# from streaming_graph import StreamingGraph
+
+# Remove this line
+# streaming_graph = StreamingGraph()
+
 from models import (
     ChatMessage, ChatRequest, ChatResponse, 
     GPTConfig, GPTResponse, DocumentResponse,
@@ -45,7 +50,8 @@ app.add_middleware(
 sessions: Dict[str, Dict[str, Any]] = {}
 
 # Initialize streaming graph
-streaming_graph = StreamingGraph()
+# Remove this line
+# streaming_graph = StreamingGraph()
 
 class SessionManager:
     @staticmethod
@@ -292,6 +298,29 @@ async def stream_chat(session_id: str, request: ChatRequest):
             for doc in session["new_uploaded_docs"]:
                 if isinstance(doc, dict) and doc.get("content"):
                     new_uploaded_docs_content.append(doc["content"])
+        
+        # Create the chunk callback first
+        queue = asyncio.Queue()
+        full_response = ""
+        
+        async def chunk_callback(chunk_content: str):
+            nonlocal full_response
+            full_response += chunk_content
+            # print(f"🔥 DIRECT CHUNK CALLBACK: {chunk_content[:50]}...")
+            
+            # Add a small delay to make streaming smoother
+            await asyncio.sleep(0.05)  # 50ms delay between chunks
+            
+            await queue.put({
+                "type": "content",
+                "data": {
+                    "content": chunk_content,
+                    "full_response": full_response,
+                    "is_complete": False
+                }
+            })
+        
+        # Create the state with the chunk callback already set
         state = GraphState(
             user_query=request.message,
             llm_model=llm_model,
@@ -303,11 +332,13 @@ async def stream_chat(session_id: str, request: ChatRequest):
             web_search=request.web_search,  
             rag=request.rag, 
             deep_search=request.deep_search,  
-            uploaded_doc=request.uploaded_doc  
+            uploaded_doc=request.uploaded_doc,
+            _chunk_callback=chunk_callback  # Add this line
         )
         
         print(f"=== GRAPH STATE CREATED ===")
         print(f"State keys: {list(state.keys())}")
+        print(f"Chunk callback set: {state.get('_chunk_callback') is not None}")
         print(f"User query: {state.get('user_query', '')}")
         print(f"LLM model: {state.get('llm_model', '')}")
         print(f"Messages count: {len(state.get('messages', []))}")
@@ -318,15 +349,51 @@ async def stream_chat(session_id: str, request: ChatRequest):
         print(f"Deep search: {state.get('deep_search', False)}")
         
         async def generate_stream():
-            full_response = ""
             try:
-                print("=== STARTING STREAM GENERATION ===")
-                async for chunk in streaming_graph.stream_chat(state, session_id):
+                print("=== STARTING DIRECT GRAPH STREAMING ===")
+                
+                async def run_graph():
+                    try:
+                        print("🔥 STARTING DIRECT GRAPH EXECUTION")
+                        async for node_result in graph.astream(state):
+                            print(f"🔥 NODE RESULT: {list(node_result.keys())}")
+                           
+                    except Exception as e:
+                        print(f"--- ERROR in direct graph execution: {e}")
+                        await queue.put({
+                            "type": "error",
+                            "data": {"error": str(e)}
+                        })
+                    finally:
+                        print("🔥 DIRECT GRAPH EXECUTION COMPLETED")
+                        await queue.put(None)  # Signal completion
+            
+                async def consume_and_yield():
+                    while True:
+                        item = await queue.get()
+                        if item is None:
+                            break
+                        if item.get("type") == "error":
+                            raise Exception(item["data"]["error"])
+                        
+                        # print(f"🔥 YIELDING DIRECT CHUNK: {item.get('data', {}).get('content', '')[:50]}...")
+                        yield item
+                
+                graph_task = asyncio.create_task(run_graph())
+                async for chunk in consume_and_yield():
                     chunk_data = json.dumps(chunk)
                     yield f"data: {chunk_data}\n\n"
-                    
-                    if chunk.get("type") == "content" and chunk.get("data", {}).get("is_complete"):
-                        full_response = chunk.get("data", {}).get("full_response", "")
+                
+                await graph_task
+                final_chunk = {
+                    "type": "content",
+                    "data": {
+                        "content": "",
+                        "is_complete": True,
+                        "full_response": full_response,
+                    }
+                }
+                yield f"data: {json.dumps(final_chunk)}\n\n"
                 
                 if full_response:
                     session["messages"].append({"role": "assistant", "content": full_response})
@@ -335,7 +402,7 @@ async def stream_chat(session_id: str, request: ChatRequest):
                 yield f"data: {json.dumps({'type': 'done', 'data': {'session_id': session_id}})}\n\n"
                 
             except Exception as e:
-                print(f"=== ERROR IN STREAM GENERATION ===")
+                print(f"=== ERROR IN DIRECT STREAM GENERATION ===")
                 print(f"Error: {str(e)}")
                 import traceback
                 traceback.print_exc()
@@ -347,7 +414,10 @@ async def stream_chat(session_id: str, request: ChatRequest):
         
         return StreamingResponse(
             generate_stream(),
-            media_type="text/plain",
+            
+            
+            media_type="text/event-stream", 
+            
             headers={
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",

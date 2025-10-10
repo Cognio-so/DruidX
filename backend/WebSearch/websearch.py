@@ -142,16 +142,26 @@ Now synthesize them into a clear, structured answer with:
 - A final 'Sources Used' section with URLs(no titles or anything).
 """
     await send_status_update(state, "🤖 Generating response from search results...", 70)
+    chunk_callback = state.get("_chunk_callback")
+    print(f"[WebSearch] Chunk callback retrieved: {chunk_callback is not None}")
+    print(f"[WebSearch] Chunk callback type: {type(chunk_callback)}")
+    full_response = ""
     if not is_web_search:
         llm=ChatGoogleGenerativeAI(
                 model="gemini-2.5-flash-lite",
                 temperature=0.3,
                 google_api_key=google_api_key,
             )
-        answer = await llm.ainvoke([
+        async for chunk in llm.astream([
             SystemMessage(content=system_prompt),
-            HumanMessage(content=f"User Query: {query}\n\nSearch Results:\n{sources_text}")
-        ])
+            HumanMessage(content=user_prompt)
+        ]):
+            if hasattr(chunk, 'content') and chunk.content:
+                full_response += chunk.content
+                print(f"[WebSearch] Basic search - chunk_callback exists: {chunk_callback is not None}")
+                if chunk_callback:
+                    print(f"[WebSearch] Calling chunk_callback for basic search")
+                    await chunk_callback(chunk.content)
         
     else:    
         llm=ChatGoogleGenerativeAI(
@@ -159,14 +169,26 @@ Now synthesize them into a clear, structured answer with:
                 temperature=0.3,
                 google_api_key=google_api_key,
             )
-        answer = await llm.ainvoke([
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=user_prompt)
-            ])
+        async for chunk in llm.astream([
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_prompt)
+        ]):
+            if hasattr(chunk, 'content') and chunk.content:
+                print(f"[STREAM]-", chunk.content)
+                full_response += chunk.content
+                print(f"[WebSearch] Web search - chunk_callback exists: {chunk_callback is not None}")
+                if chunk_callback:
+                    print(f"[WebSearch] Calling chunk_callback for web search")
+                    await chunk_callback(chunk.content)
+                else:
+                    print(f"[WebSearch] chunk_callback is None or falsy")
+    if chunk_callback:
+        await chunk_callback("\n\n")
+        full_response += "\n\n"                
     try:
         
-        print(f"[WebSearch] LLM response received: {answer.content[:100]}...")
-        state["response"] = answer.content
+        # print(f"[WebSearch] LLM response received: {full_response[:100]}...")
+        state["response"] = full_response
         state.setdefault("intermediate_results", []).append({
         "node": "WebSearch",
         "query": query,

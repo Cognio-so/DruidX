@@ -5,7 +5,7 @@ import { ReactNode } from "react";
 import { requireUser } from "@/data/requireUser";
 
 export default async function UserLayout({ children }: { children: ReactNode }) {
-  await requireUser(); 
+  await requireUser(); // This ensures user is authenticated
 
   return (
     <SidebarProvider>

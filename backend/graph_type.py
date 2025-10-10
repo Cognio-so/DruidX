@@ -1,5 +1,5 @@
 # graph_type.py
-from typing import TypedDict, List, Dict, Any, Optional
+from typing import TypedDict, List, Dict, Any, Optional, Callable
 
 class GraphState(TypedDict, total=False):
     user_query: str
@@ -29,6 +29,6 @@ class GraphState(TypedDict, total=False):
     resolved_query: Optional[str]
     active_docs: Optional[Dict[str, Any]]
     resolved_queries: Optional[List[Dict[str, Any]]]
-
+    _chunk_callback: Optional[Callable]  # Add this line for streaming callback
     deep_research_state: Optional[Dict[str, Any]]  
     deep_research_query: Optional[str]              

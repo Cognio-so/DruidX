@@ -140,12 +140,18 @@ async def analyze_query(user_query: str, prompt_template: str, llm: str) -> Opti
        
         prompt = prompt_template.replace("{user_query}", user_query)
         print(f"llm----", llm)
-        chat=get_llm(llm, 0.3)
+        # chat=get_llm(llm, 0.3)
         
         messages = [
             SystemMessage(content=prompt),
             HumanMessage(content=user_query)
         ]
+        google_api_key = os.getenv("GOOGLE_API_KEY", "")
+        chat= ChatGoogleGenerativeAI(
+                model="gemini-2.5-flash-lite",
+                temperature=0.3,
+                api_key=google_api_key,
+            )
         response = await chat.ainvoke(messages)
         content = response.content
         
@@ -169,76 +175,51 @@ def _get_last_output(state: GraphState) -> dict | None:
     """Helper to safely get the last intermediate result."""
     return state.get("intermediate_results", [])[-1] if state.get("intermediate_results") else None
 
+# In Orchestrator.py
+
 async def rewrite_query(state: GraphState) -> str:
     """
-    Dynamically rewrites the query for the *next* task in the plan,
-    using the output from the *previous* task.
+    Dynamically rewrites the query for the *next* task, using only the
+    output from the *most recent* task to be faster.
     """
     user_query = state.get("user_query", "")
     current_task = state.get("current_task", "")
     plan = state.get("tasks", [])
-    last_result = _get_last_output(state)
-    summary = state.get("context", {}).get("session", {}).get("summary", "")
-    context_info = f"Conversation context: {summary}" if summary else ""
-    if not current_task:
-        return user_query
-    if not last_result:
-        prompt = f"""
-Original User Query: "{user_query}"
-Full Execution Plan: {plan}
-Task: Create a precise, standalone query for the FIRST step in the plan: '{current_task}'.
-The query should only contain what is needed for this single step.
-{context_info}
-Rewritten Query:"""
     
-    else:
-        prompt = f"""
-You are a query rewriter for a multi-step AI agent. Your task is to formulate a precise query for the *next* step in a plan, using the context from previous steps.
-** Write only short and precise  query only **less than 150 word**.
-**  Donot add extra thing in query , for next node what is needed add that thing from the previous nodes result in query in short and concise and relevant thing.
-**Original User Goal:**
-{user_query}
+    # OPTIMIZATION: Only use the most recent result, not the whole history.
+    last_result = _get_last_output(state) 
+    context_from_last_step = f"Context from previous step ({last_result['node']}):\n{last_result['output']}" if last_result else "This is the first step."
 
-**Full Execution Plan:**
-{plan}
+    prompt = f"""You are a query rewriter for an AI agent. Create a precise, standalone query for the next step in a plan.
 
-**Gathered_information:**
-{state.get("intermediate_results")}
+Original User Goal: "{user_query}"
+Full Plan: {plan}
+Next Step to Execute: '{current_task}'
 
-**Conversation Context (for entity resolution):**
-{context_info}
----
+{context_from_last_step}
 
-**Next Step to Execute:** '{current_task}'
+Based on the goal and the context from the last step, what is the precise query for the '{current_task}' node?
+- The query must be self-contained.
+- Incorporate any necessary information (like names, topics, or data) from the previous step's context.
 
-Based on all the above, what is the precise, standalone query that should be sent to the '{current_task}' node?
--** Write only short and precise  query only **less than 150 word**.
-- If the next step needs information from the previous result (e.g., a list of books), incorporate that information directly.
-- If the next step is a different, independent part of the original query (e.g., "summarize the document"), isolate that part.
-- The query should be self-contained and ready for the next node to execute.
-
-**Output ONLY the rewritten query.NO Explanation. ONly pure rewritten query**
-""" 
-    # model=state.get("llm_model", "gpt-5-nano")
-    # llm=get_llm(model, 0.3)
-    # google_api_key = os.getenv("GOOGLE_API_KEY", "")
-    # llm= ChatGoogleGenerativeAI(
-    #             model="gemini-2.5-flash-lite",
-    #             temperature=0.3,
-    #             api_key=google_api_key,
-    #         )
-    llm_model=state.get("llm_model", "gpt-4")
-    llm=get_llm(llm_model, 0.01)
-    llm = ChatOpenAI(model="gpt-5-nano", temperature=0.1)
+**Output ONLY the rewritten query. NO explanation. Just the query.**
+"""
     try:
         print(f"🚀 REWRITING QUERY FOR TASK: {current_task}")
+        # Use a fast model for this task
+        google_api_key = os.getenv("GOOGLE_API_KEY", "")
+        llm= ChatGoogleGenerativeAI(
+                model="gemini-2.5-flash-lite",
+                temperature=0.3,
+                api_key=google_api_key,
+            )
         result = await llm.ainvoke([HumanMessage(content=prompt)])
         rewritten = result.content.strip()
         print(f"✅ REWRITTEN QUERY: {rewritten}")
         return rewritten
     except Exception as e:
         print(f"🚨 Rewrite error: {e}")
-        return user_query 
+        return user_query # Fallback to the original query on error
     
 def normalize_route(name: str) -> str:
     if not name:
@@ -364,16 +345,6 @@ async def orchestrator(state: GraphState) -> GraphState:
                 route = "END"
         state["route"] = route
 
-
-
-    
-    follow = await is_folloup(
-        user_query=user_query,
-        history=state.get("messages") or [],
-        docs_present=bool(docs),
-        kb_present=bool(kb),
-        llm_model="gpt-4o-mini"
-    )
     print(f"User_query: {user_query}")
 
      

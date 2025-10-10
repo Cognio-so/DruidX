@@ -13,32 +13,35 @@ model User {
   name          String
   email         String
   role          String    @default("user")  
+  banned        Boolean   @default(false)      // Admin plugin field
+  banReason     String?                        // Admin plugin field
+  banExpires    DateTime?                      // Admin plugin field
   emailVerified Boolean   @default(false)
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @default(now()) @updatedAt
   sessions      Session[]
   accounts      Account[]
+  Gpt           Gpt[]
 
- @@unique([email])
+  @@unique([email])
   @@map("user")
-  Gpt Gpt[]
 }
 
 model Session {
-  id        String   @id
-  expiresAt DateTime
-  token     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  ipAddress String?
-  userAgent String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id
+  expiresAt      DateTime
+  token          String
+  impersonatedBy String?                       // Admin plugin field
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([token])
   @@map("session")
-  
 }
 
 model Account {

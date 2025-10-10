@@ -7,6 +7,15 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+
+  secret: process.env.BETTER_AUTH_SECRET!,
+
+  trustedOrigins: [
+    process.env.BETTER_AUTH_URL || "http://localhost:3000",
+    ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS?.split(",") || []) 
+  ],
+
   session: {
     cookieCache: {
       enabled: true,
@@ -15,11 +24,11 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 7, 
     updateAge: 60 * 60 * 24, 
   },
-  plugins:[
+  plugins: [
     admin({
-      adminRole: ["admin"],
+      adminRoles: ["admin"],
       defaultRole: "user",
-    })
+    }),
   ],
   socialProviders: {
     google: {

@@ -25,7 +25,7 @@ export function LoginForm({
     startTransition(async () => {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/admin",
+        callbackURL: "/", // Redirect to home, let the layout handle role-based routing
         fetchOptions: {
           onSuccess: () => {
             toast.success("Signed in successfully, redirecting...");

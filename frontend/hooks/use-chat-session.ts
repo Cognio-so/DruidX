@@ -58,10 +58,10 @@ export function useChatSession(): ChatSessionHook {
           model: model,
         };
 
-        const backendUrl = process.env.BACKEND_URL;
+        
 
         const configResponse = await fetch(
-          `${backendUrl}/api/sessions/${sessionId}/gpt-config`,
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/sessions/${sessionId}/gpt-config`,
           {
             method: "POST",
             headers: {
@@ -109,11 +109,11 @@ export function useChatSession(): ChatSessionHook {
 
         setGptConfig(gptConfigData);
 
-        const backendUrl = process.env.BACKEND_URL;
+        
 
         try {
           const configResponse = await fetch(
-            `${backendUrl}/api/sessions/${sessionId}/gpt-config`,
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/sessions/${sessionId}/gpt-config`,
             {
               method: "POST",
               headers: {
@@ -146,7 +146,7 @@ export function useChatSession(): ChatSessionHook {
 
           try {
             const kbResponse = await fetch(
-              `${backendUrl}/api/sessions/${sessionId}/add-documents`,
+              `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/sessions/${sessionId}/add-documents`,
               {
                 method: "POST",
                 headers: {
@@ -180,11 +180,11 @@ export function useChatSession(): ChatSessionHook {
       }
 
       try {
-        const backendUrl = process.env.BACKEND_URL;
+        
 
         // Send user document to backend
         const response = await fetch(
-          `${backendUrl}/api/sessions/${sessionId}/add-documents`,
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/sessions/${sessionId}/add-documents`,
           {
             method: "POST",
             headers: {

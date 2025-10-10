@@ -139,7 +139,6 @@ Search Results:
 Now synthesize them into a clear, structured answer with:
 - Headings and subheadings
 - Numbered or bulleted lists
-- Citations using [Source X] that map to the provided sources
 - A final 'Sources Used' section with URLs(no titles or anything).
 """
     await send_status_update(state, "🤖 Generating response from search results...", 70)

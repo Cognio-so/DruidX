@@ -555,7 +555,7 @@ async def Rag(state: GraphState) -> GraphState:
 **Output Formatting:**
 - For summaries: Use clear paragraphs with key points highlighted
 - For searches: Present findings with specific references
-- For comparisons: Use structured comparison format
+- For comparisons: Use structured comparison format and if possible use the proper table.
 - For analysis: Provide detailed breakdown with clear sections
 - Always be direct and avoid meta-commentary about sources unless specifically asked
 """
@@ -566,12 +566,22 @@ async def Rag(state: GraphState) -> GraphState:
     ]
     
     await send_status_update(state, "🤖 Generating response from retrieved information...", 90)
-    llm=get_llm(llm_model,0.5)
+    llm=get_llm(llm_model,0.8)
     print(f"model named used in rag.....", llm_model)
-    ai_response = await llm.ainvoke(final_messages)
-    
-    state["messages"] = state.get("messages", []) + [ai_response.dict()]
-    state["response"] = ai_response.content
+    chunk_callback = state.get("_chunk_callback")
+    full_response = ""
+    ai_response_dict = {"role": "assistant", "content": ""}
+    async for chunk in llm.astream(final_messages):
+        if hasattr(chunk, 'content') and chunk.content:
+            full_response += chunk.content
+            if chunk_callback:
+                await chunk_callback(chunk.content)
+    if chunk_callback:
+        await chunk_callback("\n\n")
+        full_response += "\n\n"
+    ai_response_dict["content"] = full_response
+    # state["messages"] = state.get("messages", []) + [ai_response_dict]
+    state["response"] = full_response
     state.setdefault("intermediate_results", []).append({
         "node": "RAG",
         "query": user_query,

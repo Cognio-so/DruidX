@@ -8882,7 +8882,7 @@ export namespace Prisma {
   }
 
   export type UserCreateInput = {
-    id: string
+    id?: string
     name: string
     email: string
     role?: string
@@ -8899,7 +8899,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedCreateInput = {
-    id: string
+    id?: string
     name: string
     email: string
     role?: string
@@ -8950,7 +8950,7 @@ export namespace Prisma {
   }
 
   export type UserCreateManyInput = {
-    id: string
+    id?: string
     name: string
     email: string
     role?: string
@@ -8992,7 +8992,7 @@ export namespace Prisma {
   }
 
   export type SessionCreateInput = {
-    id: string
+    id?: string
     expiresAt: Date | string
     token: string
     impersonatedBy?: string | null
@@ -9004,7 +9004,7 @@ export namespace Prisma {
   }
 
   export type SessionUncheckedCreateInput = {
-    id: string
+    id?: string
     expiresAt: Date | string
     token: string
     impersonatedBy?: string | null
@@ -9040,7 +9040,7 @@ export namespace Prisma {
   }
 
   export type SessionCreateManyInput = {
-    id: string
+    id?: string
     expiresAt: Date | string
     token: string
     impersonatedBy?: string | null
@@ -9075,7 +9075,7 @@ export namespace Prisma {
   }
 
   export type AccountCreateInput = {
-    id: string
+    id?: string
     accountId: string
     providerId: string
     accessToken?: string | null
@@ -9091,7 +9091,7 @@ export namespace Prisma {
   }
 
   export type AccountUncheckedCreateInput = {
-    id: string
+    id?: string
     accountId: string
     providerId: string
     userId: string
@@ -9139,7 +9139,7 @@ export namespace Prisma {
   }
 
   export type AccountCreateManyInput = {
-    id: string
+    id?: string
     accountId: string
     providerId: string
     userId: string
@@ -9186,7 +9186,7 @@ export namespace Prisma {
   }
 
   export type VerificationCreateInput = {
-    id: string
+    id?: string
     identifier: string
     value: string
     expiresAt: Date | string
@@ -9195,7 +9195,7 @@ export namespace Prisma {
   }
 
   export type VerificationUncheckedCreateInput = {
-    id: string
+    id?: string
     identifier: string
     value: string
     expiresAt: Date | string
@@ -9222,7 +9222,7 @@ export namespace Prisma {
   }
 
   export type VerificationCreateManyInput = {
-    id: string
+    id?: string
     identifier: string
     value: string
     expiresAt: Date | string
@@ -10333,7 +10333,7 @@ export namespace Prisma {
   }
 
   export type SessionCreateWithoutUserInput = {
-    id: string
+    id?: string
     expiresAt: Date | string
     token: string
     impersonatedBy?: string | null
@@ -10344,7 +10344,7 @@ export namespace Prisma {
   }
 
   export type SessionUncheckedCreateWithoutUserInput = {
-    id: string
+    id?: string
     expiresAt: Date | string
     token: string
     impersonatedBy?: string | null
@@ -10365,7 +10365,7 @@ export namespace Prisma {
   }
 
   export type AccountCreateWithoutUserInput = {
-    id: string
+    id?: string
     accountId: string
     providerId: string
     accessToken?: string | null
@@ -10380,7 +10380,7 @@ export namespace Prisma {
   }
 
   export type AccountUncheckedCreateWithoutUserInput = {
-    id: string
+    id?: string
     accountId: string
     providerId: string
     accessToken?: string | null
@@ -10549,7 +10549,7 @@ export namespace Prisma {
   }
 
   export type UserCreateWithoutSessionsInput = {
-    id: string
+    id?: string
     name: string
     email: string
     role?: string
@@ -10565,7 +10565,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedCreateWithoutSessionsInput = {
-    id: string
+    id?: string
     name: string
     email: string
     role?: string
@@ -10629,7 +10629,7 @@ export namespace Prisma {
   }
 
   export type UserCreateWithoutAccountsInput = {
-    id: string
+    id?: string
     name: string
     email: string
     role?: string
@@ -10645,7 +10645,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedCreateWithoutAccountsInput = {
-    id: string
+    id?: string
     name: string
     email: string
     role?: string
@@ -10709,7 +10709,7 @@ export namespace Prisma {
   }
 
   export type UserCreateWithoutGptInput = {
-    id: string
+    id?: string
     name: string
     email: string
     role?: string
@@ -10725,7 +10725,7 @@ export namespace Prisma {
   }
 
   export type UserUncheckedCreateWithoutGptInput = {
-    id: string
+    id?: string
     name: string
     email: string
     role?: string
@@ -10789,7 +10789,7 @@ export namespace Prisma {
   }
 
   export type SessionCreateManyUserInput = {
-    id: string
+    id?: string
     expiresAt: Date | string
     token: string
     impersonatedBy?: string | null
@@ -10800,7 +10800,7 @@ export namespace Prisma {
   }
 
   export type AccountCreateManyUserInput = {
-    id: string
+    id?: string
     accountId: string
     providerId: string
     accessToken?: string | null

@@ -76,101 +76,117 @@ export function GptCard({ gpt }: GptCardProps) {
 
   return (
     <Card className="relative h-full flex flex-col overflow-hidden">
-      <CardHeader className="pb-3 flex-shrink-0">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
+      <CardHeader className="pb-2 sm:pb-3 flex-shrink-0">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             {/* Avatar */}
-            <div className="relative w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
+            <div className="relative w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex-shrink-0">
               {gpt.image && gpt.image !== "default-avatar.png" ? (
                 <Image
                   src={gpt.image}
                   alt={gpt.name}
                   fill
-                  className="rounded-full object-cover border-2 border-gray-200"
+                  className="rounded-full object-cover border border-gray-200 sm:border-2"
                 />
               ) : (
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                  <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                  <Bot className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" />
                 </div>
               )}
             </div>
 
-            {/* Name */}
+            {/* Name - Keep in same position but allow wrapping */}
             <div className="min-w-0 flex-1">
-              <CardTitle className="text-lg sm:text-xl font-semibold truncate leading-tight">
+              <CardTitle 
+                className="text-sm sm:text-base md:text-lg lg:text-xl font-semibold leading-tight break-words"
+                title={gpt.name}
+                style={{
+                  wordBreak: 'break-word',
+                  overflowWrap: 'break-word',
+                  lineHeight: '1.2',
+                  maxHeight: '2.4em', // Allow max 2 lines
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden'
+                }}
+              >
                 {gpt.name}
               </CardTitle>
             </div>
           </div>
 
-          {/* Three-dot dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10"
-              >
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem asChild>
-                <Link href={`/admin/gpts/${gpt.id}/edit`}>
-                  <Pencil className="w-4 h-4 mr-2" />
-                  Edit GPT
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={handleDelete}
-                className="text-destructive"
-                disabled={isPending}
-              >
-                {isPending ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Trash className="w-4 h-4 mr-2" />
-                )}
-                Delete GPT
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Three-dot dropdown - Always visible */}
+          <div className="flex-shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 p-0 hover:bg-gray-100 dark:hover:bg-gray-800"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44 sm:w-48">
+                <DropdownMenuItem asChild>
+                  <Link href={`/admin/gpts/${gpt.id}/edit`}>
+                    <Pencil className="w-4 h-4 mr-2" />
+                    <span className="text-sm">Edit GPT</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={handleDelete}
+                  className="text-destructive"
+                  disabled={isPending}
+                >
+                  {isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Trash className="w-4 h-4 mr-2" />
+                  )}
+                  <span className="text-sm">Delete GPT</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </CardHeader>
 
       <CardContent className="pt-0 flex-1 flex flex-col">
-        <CardDescription className="mb-4 text-sm sm:text-base line-clamp-3 flex-shrink-0">
+        <CardDescription className="mb-3 sm:mb-4 text-xs sm:text-sm md:text-base line-clamp-2 sm:line-clamp-3 flex-shrink-0">
           {gpt.description}
         </CardDescription>
 
         {/* Single horizontal line for calendar, icons, and GPT model */}
-        <div className="flex items-center justify-between text-xs sm:text-sm text-gray-500 mb-4 flex-shrink-0">
+        <div className="flex items-center justify-between text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4 flex-shrink-0">
           <div className="flex items-center gap-1">
             <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
-            <span className="truncate">
+            <span className="truncate text-xs sm:text-sm">
               {new Date(gpt.createdAt).toLocaleDateString("en-GB")}
             </span>
           </div>
           
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
             {gpt.webBrowser && (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5 sm:gap-1">
                 <Globe className="w-3 h-3 sm:w-4 sm:h-4 text-green-600 flex-shrink-0" />
               </div>
             )}
             {gpt.hybridRag && (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5 sm:gap-1">
                 <FileSearch className="w-3 h-3 sm:w-4 sm:h-4 text-purple-600 flex-shrink-0" />
               </div>
             )}
             {gpt.mcp && (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5 sm:gap-1">
                 <CircuitBoard className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600 flex-shrink-0" />
               </div>
             )}
-            <span className="text-purple-500 font-medium text-xs sm:text-sm">
-            {modelDisplayNames[gpt.model] || gpt.model}</span>
+            <span className="text-purple-500 font-medium text-xs sm:text-sm truncate max-w-[80px] sm:max-w-[120px] md:max-w-none">
+              {modelDisplayNames[gpt.model] || gpt.model}
+            </span>
           </div>
         </div>
 
@@ -180,7 +196,7 @@ export function GptCard({ gpt }: GptCardProps) {
             href={`/admin/gpts/${gpt.id}/chat`}
             className={buttonVariants({
               variant: "default",
-              className: "w-full text-sm sm:text-base",
+              className: "w-full text-sm sm:text-base h-8 sm:h-9 md:h-10",
             })}
           >
             <MessageCircle className="mr-2 w-4 h-4" />

@@ -111,11 +111,14 @@ export function useStreamingChat(sessionId: string): StreamingChatHook {
               if (data.type === 'content' && data.data) {
                 const { content, full_response, is_complete } = data.data;
                 
+                // Debug logging to see what we're receiving
+                console.log('Streaming data received:', { content, full_response, is_complete });
+                
                 setMessages(prev => prev.map(msg => 
                   msg.id === assistantMessageId 
                     ? {
                         ...msg,
-                        content: full_response,
+                        content: full_response || content || '',
                         isStreaming: !is_complete,
                       }
                     : msg

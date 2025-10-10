@@ -12,6 +12,7 @@ interface ChatMessagesHook {
     rag?: boolean;
     deep_search?: boolean;
     uploaded_doc?: boolean;
+    model?: string;
   }) => Promise<void>;
   clearMessages: () => void;
 }
@@ -24,11 +25,19 @@ export function useChatMessages(sessionId: string | null): ChatMessagesHook {
     rag?: boolean;
     deep_search?: boolean;
     uploaded_doc?: boolean;
+    model?: string;
   } = {}) => {
     if (!sessionId) {
       console.error('No session ID available');
       return;
     }
+
+    console.log('🎯 ChatMessages: Sending message with options:', {
+      message,
+      options,
+      sessionId,
+      timestamp: new Date().toISOString()
+    });
 
     await sendMessage({
       message,

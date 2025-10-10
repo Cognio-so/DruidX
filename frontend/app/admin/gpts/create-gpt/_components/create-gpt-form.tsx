@@ -39,18 +39,22 @@ import { createGpt } from "../action";
 import McpSchemaField from "./McpSchemaFeild";
 
 const GptModels = [
-  {
-    id: "gpt-4",
-    name: "GPT-4",
-  },
-  {
-    id: "gpt-4o",
-    name: "GPT-4o",
-  },
-  {
-    id: "gpt-5",
-    name: "GPT-5",
-  },
+  { id: "gemini_2_5_flash", name: "Gemini 2.5 Flash" },
+  { id: "gemini_2_5_pro", name: "Gemini 2.5 Pro" },
+  { id: "gemini_2_5_flash_lite", name: "Gemini 2.5 Flash-lite" },
+  { id: "gpt_4_1", name: "GPT 4.1" },
+  { id: "gpt_5", name: "GPT 5" },
+  { id: "gpt_5_thinking_high", name: "GPT 5 Thinking High" },
+  { id: "gpt_5_mini", name: "GPT 5 mini" },
+  { id: "gpt_5_nano", name: "GPT 5 nano" },
+  { id: "gpt_4o", name: "GPT-4o" },
+  { id: "claude_sonnet_4_5", name: "Claude Sonnet 4.5" },
+  { id: "claude_opus_4_1", name: "Claude Opus 4.1" },
+  { id: "claude_haiku_3_5", name: "Claude Haiku 3.5" },
+  { id: "grok_4_fast", name: "Grok 4 Fast" },
+  { id: "deepseek_v3_1", name: "DeepSeek V3.1" },
+  { id: "meta_llama_3_3_70b", name: "meta/llama 3.3 70b" },
+  { id: "kimi_k2_0905", name: "Kimi K2 0905" },
 ];
 
 export function CreateGptForm() {
@@ -62,10 +66,10 @@ export function CreateGptForm() {
     defaultValues: {
       gptName: "",
       gptDescription: "",
-      model: "gpt-4",
+      model: "gpt_4o",
       instructions: "",
       webSearch: false,
-      hybridRag: false, // Added default value
+      hybridRag: false,
       mcp: false,
       docs: [],
       imageUrl: "",
@@ -168,12 +172,14 @@ export function CreateGptForm() {
                             <SelectValue placeholder="Choose a model" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          {GptModels.map((model) => (
-                            <SelectItem key={model.id} value={model.id}>
-                              {model.name}
-                            </SelectItem>
-                          ))}
+                        <SelectContent className="max-h-[400px] overflow-y-auto">
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-1 p-2">
+                            {GptModels.map((model) => (
+                              <SelectItem key={model.id} value={model.id} className="text-sm">
+                                {model.name}
+                              </SelectItem>
+                            ))}
+                          </div>
                         </SelectContent>
                       </Select>
                       <FormMessage />

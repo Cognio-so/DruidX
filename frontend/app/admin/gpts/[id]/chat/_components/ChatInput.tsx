@@ -3,7 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowUp, Globe, Paperclip, Sparkle, Telescope, X } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { getModelsForFrontend, frontendToBackend, getDisplayName } from "@/lib/modelMapping";
 
 interface ChatInputProps {
   onSendMessage: (message: string, options: {
@@ -12,11 +13,13 @@ interface ChatInputProps {
     deep_search?: boolean;
     uploaded_doc?: boolean;
     uploaded_docs?: UploadedDoc[];
+    model?: string;
   }) => void;
   onDocumentUploaded?: (url: string, filename: string) => void;
   hasMessages: boolean;
   isLoading?: boolean;
   hybridRag?: boolean;
+  defaultModel?: string;
 }
 
 interface UploadedDoc {
@@ -25,20 +28,8 @@ interface UploadedDoc {
   type: string;
 }
 
-const models = [
-  {
-    name: "o3-mini",
-    value: "o3-mini",
-  },
-  {
-    name: "gpt-4o",
-    value: "gpt-4o",
-  },
-  {
-    name: "gpt-5",
-    value: "gpt-5",
-  },
-];
+// Get models from mapping
+const models = getModelsForFrontend();
 
 export default function ChatInput({
   onSendMessage,
@@ -46,9 +37,10 @@ export default function ChatInput({
   hasMessages,
   isLoading = false,
   hybridRag = false,
+  defaultModel,
 }: ChatInputProps) {
   const [message, setMessage] = useState("");
-  const [selectedModel, setSelectedModel] = useState("o3-mini");
+  const [selectedModel, setSelectedModel] = useState("gpt_4o");
   const [webSearch, setWebSearch] = useState(false);
   const [deepSearch, setDeepSearch] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -56,19 +48,54 @@ export default function ChatInput({
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Set default model when it's available
+  useEffect(() => {
+    if (defaultModel) {
+      console.log('🎯 ChatInput: Setting default model from GPT data:', defaultModel);
+      
+      // Check if the defaultModel exists in our models array
+      const modelExists = models.find(model => model.value === defaultModel);
+      if (modelExists) {
+        console.log('✅ Model found in models array, setting as selected:', defaultModel);
+        setSelectedModel(defaultModel);
+      } else {
+        console.warn('⚠️ Default model not found in models array:', defaultModel);
+        console.log('Available models:', models.map(m => m.value));
+        // Keep the current selectedModel if defaultModel is not valid
+      }
+    } else {
+      console.log('ℹ️ No defaultModel provided, using fallback:', selectedModel);
+    }
+  }, [defaultModel]);
+
   const handleModelChange = (value: string) => {
+    console.log('🔄 Model changed from', selectedModel, 'to', value);
     setSelectedModel(value);
   };
 
   const handleSend = () => {
     if (message.trim() && !isLoading) {
-      onSendMessage(message.trim(), {
+      // Convert frontend model value to backend model name
+      const backendModelName = frontendToBackend(selectedModel);
+      
+      const sendOptions = {
         web_search: webSearch,
         rag: hybridRag,
         deep_search: deepSearch,
         uploaded_doc: uploadedDocs.length > 0,
         uploaded_docs: uploadedDocs,
+        model: backendModelName, // Send backend model name
+      };
+
+      console.log('📤 ChatInput: Sending message with options:', {
+        message: message.trim(),
+        frontendModel: selectedModel,
+        backendModel: backendModelName,
+        options: sendOptions,
+        timestamp: new Date().toISOString()
       });
+
+      onSendMessage(message.trim(), sendOptions);
       setMessage("");
       setUploadedDocs([]);
     }
@@ -224,14 +251,16 @@ export default function ChatInput({
                   <SelectValue />
                 </div>
               </SelectTrigger>
-              <SelectContent>
-                {models.map(model => (
-                  <SelectItem key={model.value} value={model.value}>
-                    <div className="flex items-center gap-2">
-                      {model.name}
-                    </div>
-                  </SelectItem>
-                ))}
+              <SelectContent className="max-h-[400px] overflow-y-auto">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-1 p-2">
+                  {models.map(model => (
+                    <SelectItem key={model.value} value={model.value} className="text-sm">
+                      <div className="flex items-center gap-2">
+                        {model.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </div>
               </SelectContent>
             </Select>
 

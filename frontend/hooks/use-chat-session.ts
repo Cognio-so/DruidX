@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import { frontendToBackend } from '@/lib/modelMapping';
 
 interface ChatSessionHook {
   sessionId: string | null;
@@ -10,6 +11,7 @@ interface ChatSessionHook {
   hybridRag: boolean;
   uploadDocument: (fileUrl: string, filename: string) => Promise<void>;
   loadGPTKnowledgeBase: (gptId: string) => Promise<void>;
+  updateGPTConfig: (model: string) => Promise<void>;
 }
 
 export function useChatSession(): ChatSessionHook {
@@ -19,6 +21,7 @@ export function useChatSession(): ChatSessionHook {
   const [isInitializing, setIsInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hybridRag, setHybridRag] = useState<boolean>(false);
+  const [gptConfig, setGptConfig] = useState<any>(null);
 
   // Create session
   const createSession = useCallback(async (): Promise<string> => {
@@ -44,6 +47,45 @@ export function useChatSession(): ChatSessionHook {
     }
   }, []);
 
+  // Update GPT config with new model
+  const updateGPTConfig = useCallback(async (model: string) => {
+    if (!sessionId || !gptConfig) {
+      console.log('⚠️ Cannot update GPT config: missing sessionId or gptConfig');
+      return;
+    }
+
+    try {
+      console.log('🔄 Updating GPT config with new model:', model);
+      
+      const updatedConfig = {
+        ...gptConfig,
+        model: model
+      };
+
+      console.log('📤 Sending updated GPT config to backend:', updatedConfig);
+      
+      const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
+      
+      const configResponse = await fetch(`${backendUrl}/api/sessions/${sessionId}/gpt-config`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedConfig),
+      });
+      
+      if (!configResponse.ok) {
+        console.error('❌ Failed to update GPT config in backend:', configResponse.status);
+        const errorText = await configResponse.text();
+        console.error('Backend error details:', errorText);
+      } else {
+        console.log('✅ GPT config updated in backend successfully');
+      }
+    } catch (backendError) {
+      console.error('❌ Backend connection failed for config update:', backendError);
+    }
+  }, [sessionId, gptConfig]);
+
   // Load GPT configuration and knowledge base
   const loadGPTKnowledgeBase = useCallback(async (gptId: string, sessionId: string) => {
     try {
@@ -60,6 +102,7 @@ export function useChatSession(): ChatSessionHook {
       console.log('📋 GPT Configuration loaded:', {
         id: gpt.id,
         name: gpt.name,
+        model: gpt.model,
         hybridRag: gpt.hybridRag,
         hasKnowledgeBase: !!gpt.knowledgeBase,
         knowledgeBase: gpt.knowledgeBase
@@ -68,11 +111,12 @@ export function useChatSession(): ChatSessionHook {
       // Store hybridRag setting for use in chat
       setHybridRag(gpt.hybridRag || false);
       
-      // Send GPT configuration to backend
-      const gptConfig = {
-        model: gpt.model === 'gpt_4o' ? 'gpt-4o' : 
-               gpt.model === 'gpt_4' ? 'gpt-4' : 
-               gpt.model === 'gpt_5' ? 'gpt-5' : 'gpt-4o-mini',
+      // Create GPT configuration object with the actual model from database
+      // Convert frontend model format to backend model format
+      const backendModelName = frontendToBackend(gpt.model);
+      
+      const gptConfigData = {
+        model: backendModelName, // Use the backend model name
         webBrowser: gpt.webBrowser,
         hybridRag: gpt.hybridRag,
         mcp: gpt.mcp,
@@ -81,7 +125,15 @@ export function useChatSession(): ChatSessionHook {
         description: gpt.description
       };
 
-      console.log('📤 Sending GPT config to backend:', gptConfig);
+      console.log('🔄 Model conversion:', {
+        frontendModel: gpt.model,
+        backendModel: backendModelName
+      });
+
+      // Store the config for later updates
+      setGptConfig(gptConfigData);
+
+      console.log('📤 Sending GPT config to backend:', gptConfigData);
       
       // Check if backend is available
       const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
@@ -93,7 +145,7 @@ export function useChatSession(): ChatSessionHook {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(gptConfig),
+          body: JSON.stringify(gptConfigData),
         });
         
         if (!configResponse.ok) {
@@ -248,5 +300,6 @@ export function useChatSession(): ChatSessionHook {
     hybridRag,
     uploadDocument,
     loadGPTKnowledgeBase: (gptId: string) => loadGPTKnowledgeBase(gptId, sessionId!),
+    updateGPTConfig,
   };
 }

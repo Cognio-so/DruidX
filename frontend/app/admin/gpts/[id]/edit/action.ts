@@ -6,15 +6,41 @@ import { gptSchema } from "@/lib/zodSchema";
 import { revalidatePath } from "next/cache";
 
 const modelMapping: Record<string, string> = {
-  "gpt-4": "gpt_4",
-  "gpt-4o": "gpt_4o",
-  "gpt-5": "gpt_5",
+  "gemini_2_5_flash": "gemini_2_5_flash",
+  "gemini_2_5_pro": "gemini_2_5_pro",
+  "gemini_2_5_flash_lite": "gemini_2_5_flash_lite",
+  "gpt_4_1": "gpt_4_1",
+  "gpt_5": "gpt_5",
+  "gpt_5_thinking_high": "gpt_5_thinking_high",
+  "gpt_5_mini": "gpt_5_mini",
+  "gpt_5_nano": "gpt_5_nano",
+  "gpt_4o": "gpt_4o",
+  "claude_sonnet_4_5": "claude_sonnet_4_5",
+  "claude_opus_4_1": "claude_opus_4_1",
+  "claude_haiku_3_5": "claude_haiku_3_5",
+  "grok_4_fast": "grok_4_fast",
+  "deepseek_v3_1": "deepseek_v3_1",
+  "meta_llama_3_3_70b": "meta_llama_3_3_70b",
+  "kimi_k2_0905": "kimi_k2_0905",
 };
 
 const reverseModelMapping: Record<string, string> = {
-  "gpt_4": "gpt-4",
-  "gpt_4o": "gpt-4o", 
-  "gpt_5": "gpt-5",
+  "gemini_2_5_flash": "gemini_2_5_flash",
+  "gemini_2_5_pro": "gemini_2_5_pro",
+  "gemini_2_5_flash_lite": "gemini_2_5_flash_lite",
+  "gpt_4_1": "gpt_4_1",
+  "gpt_5": "gpt_5",
+  "gpt_5_thinking_high": "gpt_5_thinking_high",
+  "gpt_5_mini": "gpt_5_mini",
+  "gpt_5_nano": "gpt_5_nano",
+  "gpt_4o": "gpt_4o",
+  "claude_sonnet_4_5": "claude_sonnet_4_5",
+  "claude_opus_4_1": "claude_opus_4_1",
+  "claude_haiku_3_5": "claude_haiku_3_5",
+  "grok_4_fast": "grok_4_fast",
+  "deepseek_v3_1": "deepseek_v3_1",
+  "meta_llama_3_3_70b": "meta_llama_3_3_70b",
+  "kimi_k2_0905": "kimi_k2_0905",
 };
 
 export async function getGptById(id: string) {
@@ -112,7 +138,7 @@ export async function editGpt(data: {
     const processedData = {
       name: validatedData.gptName,
       description: validatedData.gptDescription,
-      model: modelMapping[validatedData.model] as "gpt_4" | "gpt_4o" | "gpt_5",
+      model: modelMapping[validatedData.model] as any,
       instruction: validatedData.instructions,
       webBrowser: validatedData.webSearch,
       hybridRag: validatedData.hybridRag,

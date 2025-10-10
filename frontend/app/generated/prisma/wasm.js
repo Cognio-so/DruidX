@@ -197,9 +197,22 @@ exports.Prisma.JsonNullValueFilter = {
   AnyNull: Prisma.AnyNull
 };
 exports.ModelEnum = exports.$Enums.ModelEnum = {
+  gemini_2_5_flash: 'gemini_2_5_flash',
+  gemini_2_5_pro: 'gemini_2_5_pro',
+  gemini_2_5_flash_lite: 'gemini_2_5_flash_lite',
+  gpt_4_1: 'gpt_4_1',
+  gpt_5: 'gpt_5',
+  gpt_5_thinking_high: 'gpt_5_thinking_high',
+  gpt_5_mini: 'gpt_5_mini',
+  gpt_5_nano: 'gpt_5_nano',
   gpt_4o: 'gpt_4o',
-  gpt_4: 'gpt_4',
-  gpt_5: 'gpt_5'
+  claude_sonnet_4_5: 'claude_sonnet_4_5',
+  claude_opus_4_1: 'claude_opus_4_1',
+  claude_haiku_3_5: 'claude_haiku_3_5',
+  grok_4_fast: 'grok_4_fast',
+  deepseek_v3_1: 'deepseek_v3_1',
+  meta_llama_3_3_70b: 'meta_llama_3_3_70b',
+  kimi_k2_0905: 'kimi_k2_0905'
 };
 
 exports.Prisma.ModelName = {
@@ -221,7 +234,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "C:\\Users\\shiva\\Desktop\\DruidX\\frontend\\app\\generated\\prisma",
+      "value": "C:\\Users\\shiva\\Desktop\\EMSA\\frontend\\app\\generated\\prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -235,7 +248,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "C:\\Users\\shiva\\Desktop\\DruidX\\frontend\\prisma\\schema.prisma",
+    "sourceFilePath": "C:\\Users\\shiva\\Desktop\\EMSA\\frontend\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -257,8 +270,8 @@ const config = {
       }
     }
   },
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../app/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel User {\n  id            String    @id\n  name          String\n  email         String\n  role          String    @default(\"user\") // Add default value\n  emailVerified Boolean   @default(false)\n  image         String?\n  createdAt     DateTime  @default(now())\n  updatedAt     DateTime  @default(now()) @updatedAt\n  sessions      Session[]\n  accounts      Account[]\n  Gpt           Gpt[]\n\n  @@unique([email])\n  @@map(\"user\")\n}\n\nmodel Session {\n  id        String   @id\n  expiresAt DateTime\n  token     String\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n  ipAddress String?\n  userAgent String?\n  userId    String\n  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  @@unique([token])\n  @@map(\"session\")\n}\n\nmodel Account {\n  id                    String    @id\n  accountId             String\n  providerId            String\n  userId                String\n  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)\n  accessToken           String?\n  refreshToken          String?\n  idToken               String?\n  accessTokenExpiresAt  DateTime?\n  refreshTokenExpiresAt DateTime?\n  scope                 String?\n  password              String?\n  createdAt             DateTime  @default(now())\n  updatedAt             DateTime  @updatedAt\n\n  @@map(\"account\")\n}\n\nmodel Verification {\n  id         String   @id\n  identifier String\n  value      String\n  expiresAt  DateTime\n  createdAt  DateTime @default(now())\n  updatedAt  DateTime @default(now()) @updatedAt\n\n  @@map(\"verification\")\n}\n\nmodel Gpt {\n  id            String    @id @default(cuid())\n  userId        String\n  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)\n  name          String    @db.VarChar(100)\n  description   String    @db.VarChar(500)\n  model         ModelEnum\n  instruction   String    @db.Text\n  webBrowser    Boolean   @default(false)\n  hybridRag     Boolean   @default(false) // Added hybrid RAG field\n  mcp           Boolean   @default(false)\n  mcpSchema     Json?\n  image         String\n  knowledgeBase String?\n  createdAt     DateTime  @default(now())\n  updatedAt     DateTime  @updatedAt\n}\n\nmodel Invitation {\n  id         String    @id @default(cuid())\n  email      String\n  name       String\n  role       String\n  message    String?\n  token      String    @unique\n  status     String    @default(\"pending\") // pending, accepted, expired\n  expiresAt  DateTime\n  createdAt  DateTime  @default(now())\n  updatedAt  DateTime  @updatedAt\n  acceptedAt DateTime?\n  acceptedBy String? // User ID who accepted the invitation\n\n  @@map(\"invitation\")\n}\n\nenum ModelEnum {\n  gpt_4o\n  gpt_4\n  gpt_5\n}\n",
-  "inlineSchemaHash": "d883e9a32c52e597cb164a078330e1018945c6ac81addb0379ecd8769710a353",
+  "inlineSchema": "generator client {\n  provider = \"prisma-client-js\"\n  output   = \"../app/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel User {\n  id            String    @id\n  name          String\n  email         String\n  role          String    @default(\"user\")\n  emailVerified Boolean   @default(false)\n  image         String?\n  createdAt     DateTime  @default(now())\n  updatedAt     DateTime  @default(now()) @updatedAt\n  sessions      Session[]\n  accounts      Account[]\n  Gpt           Gpt[]\n\n  @@unique([email])\n  @@map(\"user\")\n}\n\nmodel Session {\n  id        String   @id\n  expiresAt DateTime\n  token     String\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n  ipAddress String?\n  userAgent String?\n  userId    String\n  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  @@unique([token])\n  @@map(\"session\")\n}\n\nmodel Account {\n  id                    String    @id\n  accountId             String\n  providerId            String\n  userId                String\n  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)\n  accessToken           String?\n  refreshToken          String?\n  idToken               String?\n  accessTokenExpiresAt  DateTime?\n  refreshTokenExpiresAt DateTime?\n  scope                 String?\n  password              String?\n  createdAt             DateTime  @default(now())\n  updatedAt             DateTime  @updatedAt\n\n  @@map(\"account\")\n}\n\nmodel Verification {\n  id         String   @id\n  identifier String\n  value      String\n  expiresAt  DateTime\n  createdAt  DateTime @default(now())\n  updatedAt  DateTime @default(now()) @updatedAt\n\n  @@map(\"verification\")\n}\n\nmodel Gpt {\n  id            String    @id @default(cuid())\n  userId        String\n  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)\n  name          String    @db.VarChar(100)\n  description   String    @db.VarChar(500)\n  model         ModelEnum\n  instruction   String    @db.Text\n  webBrowser    Boolean   @default(false)\n  hybridRag     Boolean   @default(false)\n  mcp           Boolean   @default(false)\n  mcpSchema     Json?\n  image         String\n  knowledgeBase String?\n  createdAt     DateTime  @default(now())\n  updatedAt     DateTime  @updatedAt\n}\n\nmodel Invitation {\n  id         String    @id @default(cuid())\n  email      String\n  name       String\n  role       String\n  message    String?\n  token      String    @unique\n  status     String    @default(\"pending\")\n  expiresAt  DateTime\n  createdAt  DateTime  @default(now())\n  updatedAt  DateTime  @updatedAt\n  acceptedAt DateTime?\n  acceptedBy String?\n\n  @@map(\"invitation\")\n}\n\nenum ModelEnum {\n  gemini_2_5_flash\n  gemini_2_5_pro\n  gemini_2_5_flash_lite\n  gpt_4_1\n  gpt_5\n  gpt_5_thinking_high\n  gpt_5_mini\n  gpt_5_nano\n  gpt_4o\n  claude_sonnet_4_5\n  claude_opus_4_1\n  claude_haiku_3_5\n  grok_4_fast\n  deepseek_v3_1\n  meta_llama_3_3_70b\n  kimi_k2_0905\n}\n",
+  "inlineSchemaHash": "bd09f074956afd14cd9a74eb537ce40ddcd2ca5a1f6aae4118efa5e8275d0a2f",
   "copyEngine": false
 }
 config.dirname = '/'

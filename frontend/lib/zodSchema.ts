@@ -11,7 +11,24 @@ export const gptSchema = z.object({
     .min(10, { message: "Description must be at least 10 characters long" })
     .max(300, { message: "Description must not exceed 300 characters" }),
 
-  model: z.enum(["gpt-4", "gpt-4o", "gpt-5"]).refine((val) => !!val, {
+  model: z.enum([
+    "gemini_2_5_flash",
+    "gemini_2_5_pro", 
+    "gemini_2_5_flash_lite",
+    "gpt_4_1",
+    "gpt_5",
+    "gpt_5_thinking_high",
+    "gpt_5_mini",
+    "gpt_5_nano",
+    "gpt_4o",
+    "claude_sonnet_4_5",
+    "claude_opus_4_1",
+    "claude_haiku_3_5",
+    "grok_4_fast",
+    "deepseek_v3_1",
+    "meta_llama_3_3_70b",
+    "kimi_k2_0905"
+  ]).refine((val) => !!val, {
     message: "Please select a model",
   }),
 

@@ -225,9 +225,22 @@ exports.Prisma.JsonNullValueFilter = {
   AnyNull: Prisma.AnyNull
 };
 exports.ModelEnum = exports.$Enums.ModelEnum = {
+  gemini_2_5_flash: 'gemini_2_5_flash',
+  gemini_2_5_pro: 'gemini_2_5_pro',
+  gemini_2_5_flash_lite: 'gemini_2_5_flash_lite',
+  gpt_4_1: 'gpt_4_1',
+  gpt_5: 'gpt_5',
+  gpt_5_thinking_high: 'gpt_5_thinking_high',
+  gpt_5_mini: 'gpt_5_mini',
+  gpt_5_nano: 'gpt_5_nano',
   gpt_4o: 'gpt_4o',
-  gpt_4: 'gpt_4',
-  gpt_5: 'gpt_5'
+  claude_sonnet_4_5: 'claude_sonnet_4_5',
+  claude_opus_4_1: 'claude_opus_4_1',
+  claude_haiku_3_5: 'claude_haiku_3_5',
+  grok_4_fast: 'grok_4_fast',
+  deepseek_v3_1: 'deepseek_v3_1',
+  meta_llama_3_3_70b: 'meta_llama_3_3_70b',
+  kimi_k2_0905: 'kimi_k2_0905'
 };
 
 exports.Prisma.ModelName = {

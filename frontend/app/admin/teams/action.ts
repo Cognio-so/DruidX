@@ -6,6 +6,7 @@ import {
   teamMemberUpdateSchema,
   teamMemberInviteSchema,
 } from "@/lib/zodSchema";
+import { requireAdmin } from "@/data/requireAdmin";
 
 export async function createInvitation(data: {
   email: string;
@@ -13,6 +14,7 @@ export async function createInvitation(data: {
   role: string;
   message?: string;
 }) {
+  await requireAdmin();
   const validatedFields = teamMemberInviteSchema.safeParse(data);
 
   if (!validatedFields.success) {

@@ -1,9 +1,11 @@
 'use server';
 
+import { requireAdmin } from "@/data/requireAdmin";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
 export async function deleteGptbyId(id: string) {
+    await requireAdmin();
     try {
         await prisma.gpt.delete({
             where: {

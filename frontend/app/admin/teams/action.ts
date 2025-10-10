@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import {
   teamMemberUpdateSchema,
   teamMemberInviteSchema,
+  assignGptSchema,
 } from "@/lib/zodSchema";
 import { requireAdmin } from "@/data/requireAdmin";
 
@@ -35,7 +36,7 @@ export async function createInvitation(data: {
   }
 
   const token = crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); 
 
   const invitation = await prisma.invitation.create({
     data: {
@@ -125,7 +126,6 @@ export async function updateUser(
 }
 
 export async function deleteUser(userId: string) {
-  // Check if user exists
   const user = await prisma.user.findUnique({
     where: { id: userId },
   });
@@ -185,3 +185,48 @@ export async function acceptInvitation(token: string) {
 
   return { success: true };
 }
+
+export async function assignGptsToUser(data: {
+  userId: string;
+  gptIds: string[];
+}) {
+  await requireAdmin();
+  
+  const validatedFields = assignGptSchema.safeParse(data);
+
+  if (!validatedFields.success) {
+    throw new Error("Validation failed: " + validatedFields.error.message);
+  }
+
+  const { userId, gptIds } = validatedFields.data;
+
+  // Get current admin user ID for assignedBy field
+  const adminUser = await prisma.user.findFirst({
+    where: { role: "admin" }
+  });
+
+  if (!adminUser) {
+    throw new Error("Admin user not found");
+  }
+
+  // First, remove all existing assignments for this user
+  await prisma.assignGpt.deleteMany({
+    where: { userId }
+  });
+
+  // Then create new assignments
+  if (gptIds.length > 0) {
+    await prisma.assignGpt.createMany({
+      data: gptIds.map(gptId => ({
+        userId,
+        gptId,
+        assignedBy: adminUser.id
+      }))
+    });
+  }
+
+  revalidatePath("/admin/teams");
+  return { success: true };
+}
+
+

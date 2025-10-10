@@ -9,20 +9,21 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String      @id @default(cuid())
   name          String
   email         String
-  role          String    @default("user")
-  banned        Boolean   @default(false) // Admin plugin field
+  role          String      @default("user")
+  banned        Boolean     @default(false) // Admin plugin field
   banReason     String? // Admin plugin field
   banExpires    DateTime? // Admin plugin field
-  emailVerified Boolean   @default(false)
+  emailVerified Boolean     @default(false)
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @default(now()) @updatedAt
   sessions      Session[]
   accounts      Account[]
   Gpt           Gpt[]
+  assignedGpts  AssignGpt[]
 
   @@unique([email])
   @@map("user")
@@ -75,21 +76,22 @@ model Verification {
 }
 
 model Gpt {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name          String    @db.VarChar(100)
-  description   String    @db.VarChar(500)
-  model         ModelEnum
-  instruction   String    @db.Text
-  webBrowser    Boolean   @default(false)
-  hybridRag     Boolean   @default(false)
-  mcp           Boolean   @default(false)
-  mcpSchema     Json?
-  image         String
-  knowledgeBase String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String      @id @default(cuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String      @db.VarChar(100)
+  description     String      @db.VarChar(500)
+  model           ModelEnum
+  instruction     String      @db.Text
+  webBrowser      Boolean     @default(false)
+  hybridRag       Boolean     @default(false)
+  mcp             Boolean     @default(false)
+  mcpSchema       Json?
+  image           String
+  knowledgeBase   String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  assignedToUsers AssignGpt[]
 }
 
 model Invitation {
@@ -107,6 +109,19 @@ model Invitation {
   acceptedBy String?
 
   @@map("invitation")
+}
+
+model AssignGpt {
+  id         String   @id @default(cuid())
+  userId     String
+  gptId      String
+  assignedAt DateTime @default(now())
+  assignedBy String // Admin who assigned the GPT
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gpt        Gpt      @relation(fields: [gptId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gptId])
+  @@map("assign_gpt")
 }
 
 enum ModelEnum {

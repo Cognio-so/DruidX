@@ -51,9 +51,11 @@ import {
   Mail,
   Calendar,
   Loader2,
+  SparkleIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { updateUser, deleteUser } from "../action";
+import AssignGptDialog from "./assign-gpt-dialog";
 
 interface TeamsTableProps {
   teamMembers: TeamMember[];
@@ -70,6 +72,7 @@ export default function TeamsTable({
 }: TeamsTableProps) {
   const [editingUser, setEditingUser] = useState<TeamMember | null>(null);
   const [deletingUser, setDeletingUser] = useState<TeamMember | null>(null);
+  const [assigningUser, setAssigningUser] = useState<TeamMember | null>(null);
   const [isPending, startTransition] = useTransition();
   const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>(teamMembers);
   const router = useRouter();
@@ -179,6 +182,10 @@ export default function TeamsTable({
     }
   };
 
+  const handleAssignGpt = (user: TeamMember) => {
+    setAssigningUser(user);
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -269,16 +276,20 @@ export default function TeamsTable({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEdit(member)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
+                      <DropdownMenuItem onClick={() => handleAssignGpt(member)}>
+                          <SparkleIcon className="h-4 w-4 mr-2 text-primary" />
+                          Assign Gpt
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleEdit(member)}>
+                          <Edit className="h-4 w-4 mr-2 text-primary" />
+                          Edit
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleDelete(member)}
                           className="text-destructive"
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
+                          <Trash2 className="h-4 w-4 mr-2 text-destructive" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -407,6 +418,13 @@ export default function TeamsTable({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Assign GPT Dialog */}
+      <AssignGptDialog
+        user={assigningUser}
+        open={!!assigningUser}
+        onOpenChange={(open) => !open && setAssigningUser(null)}
+      />
     </>
   );
 }

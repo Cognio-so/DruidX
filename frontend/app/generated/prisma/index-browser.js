@@ -203,6 +203,14 @@ exports.Prisma.InvitationScalarFieldEnum = {
   acceptedBy: 'acceptedBy'
 };
 
+exports.Prisma.AssignGptScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  gptId: 'gptId',
+  assignedAt: 'assignedAt',
+  assignedBy: 'assignedBy'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -253,7 +261,8 @@ exports.Prisma.ModelName = {
   Account: 'Account',
   Verification: 'Verification',
   Gpt: 'Gpt',
-  Invitation: 'Invitation'
+  Invitation: 'Invitation',
+  AssignGpt: 'AssignGpt'
 };
 
 /**

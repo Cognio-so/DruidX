@@ -43,6 +43,11 @@ export type Gpt = $Result.DefaultSelection<Prisma.$GptPayload>
  * 
  */
 export type Invitation = $Result.DefaultSelection<Prisma.$InvitationPayload>
+/**
+ * Model AssignGpt
+ * 
+ */
+export type AssignGpt = $Result.DefaultSelection<Prisma.$AssignGptPayload>
 
 /**
  * Enums
@@ -252,6 +257,16 @@ export class PrismaClient<
     * ```
     */
   get invitation(): Prisma.InvitationDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.assignGpt`: Exposes CRUD operations for the **AssignGpt** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more AssignGpts
+    * const assignGpts = await prisma.assignGpt.findMany()
+    * ```
+    */
+  get assignGpt(): Prisma.AssignGptDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -697,7 +712,8 @@ export namespace Prisma {
     Account: 'Account',
     Verification: 'Verification',
     Gpt: 'Gpt',
-    Invitation: 'Invitation'
+    Invitation: 'Invitation',
+    AssignGpt: 'AssignGpt'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -716,7 +732,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "session" | "account" | "verification" | "gpt" | "invitation"
+      modelProps: "user" | "session" | "account" | "verification" | "gpt" | "invitation" | "assignGpt"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1164,6 +1180,80 @@ export namespace Prisma {
           }
         }
       }
+      AssignGpt: {
+        payload: Prisma.$AssignGptPayload<ExtArgs>
+        fields: Prisma.AssignGptFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.AssignGptFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssignGptPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.AssignGptFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssignGptPayload>
+          }
+          findFirst: {
+            args: Prisma.AssignGptFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssignGptPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.AssignGptFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssignGptPayload>
+          }
+          findMany: {
+            args: Prisma.AssignGptFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssignGptPayload>[]
+          }
+          create: {
+            args: Prisma.AssignGptCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssignGptPayload>
+          }
+          createMany: {
+            args: Prisma.AssignGptCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.AssignGptCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssignGptPayload>[]
+          }
+          delete: {
+            args: Prisma.AssignGptDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssignGptPayload>
+          }
+          update: {
+            args: Prisma.AssignGptUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssignGptPayload>
+          }
+          deleteMany: {
+            args: Prisma.AssignGptDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.AssignGptUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.AssignGptUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssignGptPayload>[]
+          }
+          upsert: {
+            args: Prisma.AssignGptUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssignGptPayload>
+          }
+          aggregate: {
+            args: Prisma.AssignGptAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateAssignGpt>
+          }
+          groupBy: {
+            args: Prisma.AssignGptGroupByArgs<ExtArgs>
+            result: $Utils.Optional<AssignGptGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.AssignGptCountArgs<ExtArgs>
+            result: $Utils.Optional<AssignGptCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -1266,6 +1356,7 @@ export namespace Prisma {
     verification?: VerificationOmit
     gpt?: GptOmit
     invitation?: InvitationOmit
+    assignGpt?: AssignGptOmit
   }
 
   /* Types for Logging */
@@ -1349,12 +1440,14 @@ export namespace Prisma {
     sessions: number
     accounts: number
     Gpt: number
+    assignedGpts: number
   }
 
   export type UserCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     sessions?: boolean | UserCountOutputTypeCountSessionsArgs
     accounts?: boolean | UserCountOutputTypeCountAccountsArgs
     Gpt?: boolean | UserCountOutputTypeCountGptArgs
+    assignedGpts?: boolean | UserCountOutputTypeCountAssignedGptsArgs
   }
 
   // Custom InputTypes
@@ -1387,6 +1480,44 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountGptArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: GptWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountAssignedGptsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: AssignGptWhereInput
+  }
+
+
+  /**
+   * Count Type GptCountOutputType
+   */
+
+  export type GptCountOutputType = {
+    assignedToUsers: number
+  }
+
+  export type GptCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    assignedToUsers?: boolean | GptCountOutputTypeCountAssignedToUsersArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * GptCountOutputType without action
+   */
+  export type GptCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GptCountOutputType
+     */
+    select?: GptCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * GptCountOutputType without action
+   */
+  export type GptCountOutputTypeCountAssignedToUsersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: AssignGptWhereInput
   }
 
 
@@ -1609,6 +1740,7 @@ export namespace Prisma {
     sessions?: boolean | User$sessionsArgs<ExtArgs>
     accounts?: boolean | User$accountsArgs<ExtArgs>
     Gpt?: boolean | User$GptArgs<ExtArgs>
+    assignedGpts?: boolean | User$assignedGptsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["user"]>
 
@@ -1659,6 +1791,7 @@ export namespace Prisma {
     sessions?: boolean | User$sessionsArgs<ExtArgs>
     accounts?: boolean | User$accountsArgs<ExtArgs>
     Gpt?: boolean | User$GptArgs<ExtArgs>
+    assignedGpts?: boolean | User$assignedGptsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type UserIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -1670,6 +1803,7 @@ export namespace Prisma {
       sessions: Prisma.$SessionPayload<ExtArgs>[]
       accounts: Prisma.$AccountPayload<ExtArgs>[]
       Gpt: Prisma.$GptPayload<ExtArgs>[]
+      assignedGpts: Prisma.$AssignGptPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -2080,6 +2214,7 @@ export namespace Prisma {
     sessions<T extends User$sessionsArgs<ExtArgs> = {}>(args?: Subset<T, User$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     accounts<T extends User$accountsArgs<ExtArgs> = {}>(args?: Subset<T, User$accountsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AccountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     Gpt<T extends User$GptArgs<ExtArgs> = {}>(args?: Subset<T, User$GptArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$GptPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    assignedGpts<T extends User$assignedGptsArgs<ExtArgs> = {}>(args?: Subset<T, User$assignedGptsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AssignGptPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2577,6 +2712,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: GptScalarFieldEnum | GptScalarFieldEnum[]
+  }
+
+  /**
+   * User.assignedGpts
+   */
+  export type User$assignedGptsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssignGpt
+     */
+    select?: AssignGptSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AssignGpt
+     */
+    omit?: AssignGptOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AssignGptInclude<ExtArgs> | null
+    where?: AssignGptWhereInput
+    orderBy?: AssignGptOrderByWithRelationInput | AssignGptOrderByWithRelationInput[]
+    cursor?: AssignGptWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: AssignGptScalarFieldEnum | AssignGptScalarFieldEnum[]
   }
 
   /**
@@ -6111,6 +6270,8 @@ export namespace Prisma {
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
+    assignedToUsers?: boolean | Gpt$assignedToUsersArgs<ExtArgs>
+    _count?: boolean | GptCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["gpt"]>
 
   export type GptSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -6169,6 +6330,8 @@ export namespace Prisma {
   export type GptOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "name" | "description" | "model" | "instruction" | "webBrowser" | "hybridRag" | "mcp" | "mcpSchema" | "image" | "knowledgeBase" | "createdAt" | "updatedAt", ExtArgs["result"]["gpt"]>
   export type GptInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
+    assignedToUsers?: boolean | Gpt$assignedToUsersArgs<ExtArgs>
+    _count?: boolean | GptCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type GptIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -6181,6 +6344,7 @@ export namespace Prisma {
     name: "Gpt"
     objects: {
       user: Prisma.$UserPayload<ExtArgs>
+      assignedToUsers: Prisma.$AssignGptPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -6592,6 +6756,7 @@ export namespace Prisma {
   export interface Prisma__GptClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    assignedToUsers<T extends Gpt$assignedToUsersArgs<ExtArgs> = {}>(args?: Subset<T, Gpt$assignedToUsersArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AssignGptPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -7028,6 +7193,30 @@ export namespace Prisma {
      * Limit how many Gpts to delete.
      */
     limit?: number
+  }
+
+  /**
+   * Gpt.assignedToUsers
+   */
+  export type Gpt$assignedToUsersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssignGpt
+     */
+    select?: AssignGptSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AssignGpt
+     */
+    omit?: AssignGptOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AssignGptInclude<ExtArgs> | null
+    where?: AssignGptWhereInput
+    orderBy?: AssignGptOrderByWithRelationInput | AssignGptOrderByWithRelationInput[]
+    cursor?: AssignGptWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: AssignGptScalarFieldEnum | AssignGptScalarFieldEnum[]
   }
 
   /**
@@ -8136,6 +8325,1072 @@ export namespace Prisma {
 
 
   /**
+   * Model AssignGpt
+   */
+
+  export type AggregateAssignGpt = {
+    _count: AssignGptCountAggregateOutputType | null
+    _min: AssignGptMinAggregateOutputType | null
+    _max: AssignGptMaxAggregateOutputType | null
+  }
+
+  export type AssignGptMinAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    gptId: string | null
+    assignedAt: Date | null
+    assignedBy: string | null
+  }
+
+  export type AssignGptMaxAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    gptId: string | null
+    assignedAt: Date | null
+    assignedBy: string | null
+  }
+
+  export type AssignGptCountAggregateOutputType = {
+    id: number
+    userId: number
+    gptId: number
+    assignedAt: number
+    assignedBy: number
+    _all: number
+  }
+
+
+  export type AssignGptMinAggregateInputType = {
+    id?: true
+    userId?: true
+    gptId?: true
+    assignedAt?: true
+    assignedBy?: true
+  }
+
+  export type AssignGptMaxAggregateInputType = {
+    id?: true
+    userId?: true
+    gptId?: true
+    assignedAt?: true
+    assignedBy?: true
+  }
+
+  export type AssignGptCountAggregateInputType = {
+    id?: true
+    userId?: true
+    gptId?: true
+    assignedAt?: true
+    assignedBy?: true
+    _all?: true
+  }
+
+  export type AssignGptAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which AssignGpt to aggregate.
+     */
+    where?: AssignGptWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AssignGpts to fetch.
+     */
+    orderBy?: AssignGptOrderByWithRelationInput | AssignGptOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: AssignGptWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AssignGpts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AssignGpts.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned AssignGpts
+    **/
+    _count?: true | AssignGptCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: AssignGptMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: AssignGptMaxAggregateInputType
+  }
+
+  export type GetAssignGptAggregateType<T extends AssignGptAggregateArgs> = {
+        [P in keyof T & keyof AggregateAssignGpt]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateAssignGpt[P]>
+      : GetScalarType<T[P], AggregateAssignGpt[P]>
+  }
+
+
+
+
+  export type AssignGptGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: AssignGptWhereInput
+    orderBy?: AssignGptOrderByWithAggregationInput | AssignGptOrderByWithAggregationInput[]
+    by: AssignGptScalarFieldEnum[] | AssignGptScalarFieldEnum
+    having?: AssignGptScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: AssignGptCountAggregateInputType | true
+    _min?: AssignGptMinAggregateInputType
+    _max?: AssignGptMaxAggregateInputType
+  }
+
+  export type AssignGptGroupByOutputType = {
+    id: string
+    userId: string
+    gptId: string
+    assignedAt: Date
+    assignedBy: string
+    _count: AssignGptCountAggregateOutputType | null
+    _min: AssignGptMinAggregateOutputType | null
+    _max: AssignGptMaxAggregateOutputType | null
+  }
+
+  type GetAssignGptGroupByPayload<T extends AssignGptGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<AssignGptGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof AssignGptGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], AssignGptGroupByOutputType[P]>
+            : GetScalarType<T[P], AssignGptGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type AssignGptSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    gptId?: boolean
+    assignedAt?: boolean
+    assignedBy?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    gpt?: boolean | GptDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["assignGpt"]>
+
+  export type AssignGptSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    gptId?: boolean
+    assignedAt?: boolean
+    assignedBy?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    gpt?: boolean | GptDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["assignGpt"]>
+
+  export type AssignGptSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    gptId?: boolean
+    assignedAt?: boolean
+    assignedBy?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    gpt?: boolean | GptDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["assignGpt"]>
+
+  export type AssignGptSelectScalar = {
+    id?: boolean
+    userId?: boolean
+    gptId?: boolean
+    assignedAt?: boolean
+    assignedBy?: boolean
+  }
+
+  export type AssignGptOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "gptId" | "assignedAt" | "assignedBy", ExtArgs["result"]["assignGpt"]>
+  export type AssignGptInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    gpt?: boolean | GptDefaultArgs<ExtArgs>
+  }
+  export type AssignGptIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    gpt?: boolean | GptDefaultArgs<ExtArgs>
+  }
+  export type AssignGptIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+    gpt?: boolean | GptDefaultArgs<ExtArgs>
+  }
+
+  export type $AssignGptPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "AssignGpt"
+    objects: {
+      user: Prisma.$UserPayload<ExtArgs>
+      gpt: Prisma.$GptPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      userId: string
+      gptId: string
+      assignedAt: Date
+      assignedBy: string
+    }, ExtArgs["result"]["assignGpt"]>
+    composites: {}
+  }
+
+  type AssignGptGetPayload<S extends boolean | null | undefined | AssignGptDefaultArgs> = $Result.GetResult<Prisma.$AssignGptPayload, S>
+
+  type AssignGptCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<AssignGptFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: AssignGptCountAggregateInputType | true
+    }
+
+  export interface AssignGptDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['AssignGpt'], meta: { name: 'AssignGpt' } }
+    /**
+     * Find zero or one AssignGpt that matches the filter.
+     * @param {AssignGptFindUniqueArgs} args - Arguments to find a AssignGpt
+     * @example
+     * // Get one AssignGpt
+     * const assignGpt = await prisma.assignGpt.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends AssignGptFindUniqueArgs>(args: SelectSubset<T, AssignGptFindUniqueArgs<ExtArgs>>): Prisma__AssignGptClient<$Result.GetResult<Prisma.$AssignGptPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one AssignGpt that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {AssignGptFindUniqueOrThrowArgs} args - Arguments to find a AssignGpt
+     * @example
+     * // Get one AssignGpt
+     * const assignGpt = await prisma.assignGpt.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends AssignGptFindUniqueOrThrowArgs>(args: SelectSubset<T, AssignGptFindUniqueOrThrowArgs<ExtArgs>>): Prisma__AssignGptClient<$Result.GetResult<Prisma.$AssignGptPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first AssignGpt that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AssignGptFindFirstArgs} args - Arguments to find a AssignGpt
+     * @example
+     * // Get one AssignGpt
+     * const assignGpt = await prisma.assignGpt.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends AssignGptFindFirstArgs>(args?: SelectSubset<T, AssignGptFindFirstArgs<ExtArgs>>): Prisma__AssignGptClient<$Result.GetResult<Prisma.$AssignGptPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first AssignGpt that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AssignGptFindFirstOrThrowArgs} args - Arguments to find a AssignGpt
+     * @example
+     * // Get one AssignGpt
+     * const assignGpt = await prisma.assignGpt.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends AssignGptFindFirstOrThrowArgs>(args?: SelectSubset<T, AssignGptFindFirstOrThrowArgs<ExtArgs>>): Prisma__AssignGptClient<$Result.GetResult<Prisma.$AssignGptPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more AssignGpts that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AssignGptFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all AssignGpts
+     * const assignGpts = await prisma.assignGpt.findMany()
+     * 
+     * // Get first 10 AssignGpts
+     * const assignGpts = await prisma.assignGpt.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const assignGptWithIdOnly = await prisma.assignGpt.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends AssignGptFindManyArgs>(args?: SelectSubset<T, AssignGptFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AssignGptPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a AssignGpt.
+     * @param {AssignGptCreateArgs} args - Arguments to create a AssignGpt.
+     * @example
+     * // Create one AssignGpt
+     * const AssignGpt = await prisma.assignGpt.create({
+     *   data: {
+     *     // ... data to create a AssignGpt
+     *   }
+     * })
+     * 
+     */
+    create<T extends AssignGptCreateArgs>(args: SelectSubset<T, AssignGptCreateArgs<ExtArgs>>): Prisma__AssignGptClient<$Result.GetResult<Prisma.$AssignGptPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many AssignGpts.
+     * @param {AssignGptCreateManyArgs} args - Arguments to create many AssignGpts.
+     * @example
+     * // Create many AssignGpts
+     * const assignGpt = await prisma.assignGpt.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends AssignGptCreateManyArgs>(args?: SelectSubset<T, AssignGptCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many AssignGpts and returns the data saved in the database.
+     * @param {AssignGptCreateManyAndReturnArgs} args - Arguments to create many AssignGpts.
+     * @example
+     * // Create many AssignGpts
+     * const assignGpt = await prisma.assignGpt.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many AssignGpts and only return the `id`
+     * const assignGptWithIdOnly = await prisma.assignGpt.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends AssignGptCreateManyAndReturnArgs>(args?: SelectSubset<T, AssignGptCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AssignGptPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a AssignGpt.
+     * @param {AssignGptDeleteArgs} args - Arguments to delete one AssignGpt.
+     * @example
+     * // Delete one AssignGpt
+     * const AssignGpt = await prisma.assignGpt.delete({
+     *   where: {
+     *     // ... filter to delete one AssignGpt
+     *   }
+     * })
+     * 
+     */
+    delete<T extends AssignGptDeleteArgs>(args: SelectSubset<T, AssignGptDeleteArgs<ExtArgs>>): Prisma__AssignGptClient<$Result.GetResult<Prisma.$AssignGptPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one AssignGpt.
+     * @param {AssignGptUpdateArgs} args - Arguments to update one AssignGpt.
+     * @example
+     * // Update one AssignGpt
+     * const assignGpt = await prisma.assignGpt.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends AssignGptUpdateArgs>(args: SelectSubset<T, AssignGptUpdateArgs<ExtArgs>>): Prisma__AssignGptClient<$Result.GetResult<Prisma.$AssignGptPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more AssignGpts.
+     * @param {AssignGptDeleteManyArgs} args - Arguments to filter AssignGpts to delete.
+     * @example
+     * // Delete a few AssignGpts
+     * const { count } = await prisma.assignGpt.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends AssignGptDeleteManyArgs>(args?: SelectSubset<T, AssignGptDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more AssignGpts.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AssignGptUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many AssignGpts
+     * const assignGpt = await prisma.assignGpt.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends AssignGptUpdateManyArgs>(args: SelectSubset<T, AssignGptUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more AssignGpts and returns the data updated in the database.
+     * @param {AssignGptUpdateManyAndReturnArgs} args - Arguments to update many AssignGpts.
+     * @example
+     * // Update many AssignGpts
+     * const assignGpt = await prisma.assignGpt.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more AssignGpts and only return the `id`
+     * const assignGptWithIdOnly = await prisma.assignGpt.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends AssignGptUpdateManyAndReturnArgs>(args: SelectSubset<T, AssignGptUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AssignGptPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one AssignGpt.
+     * @param {AssignGptUpsertArgs} args - Arguments to update or create a AssignGpt.
+     * @example
+     * // Update or create a AssignGpt
+     * const assignGpt = await prisma.assignGpt.upsert({
+     *   create: {
+     *     // ... data to create a AssignGpt
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the AssignGpt we want to update
+     *   }
+     * })
+     */
+    upsert<T extends AssignGptUpsertArgs>(args: SelectSubset<T, AssignGptUpsertArgs<ExtArgs>>): Prisma__AssignGptClient<$Result.GetResult<Prisma.$AssignGptPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of AssignGpts.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AssignGptCountArgs} args - Arguments to filter AssignGpts to count.
+     * @example
+     * // Count the number of AssignGpts
+     * const count = await prisma.assignGpt.count({
+     *   where: {
+     *     // ... the filter for the AssignGpts we want to count
+     *   }
+     * })
+    **/
+    count<T extends AssignGptCountArgs>(
+      args?: Subset<T, AssignGptCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], AssignGptCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a AssignGpt.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AssignGptAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends AssignGptAggregateArgs>(args: Subset<T, AssignGptAggregateArgs>): Prisma.PrismaPromise<GetAssignGptAggregateType<T>>
+
+    /**
+     * Group by AssignGpt.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AssignGptGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends AssignGptGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: AssignGptGroupByArgs['orderBy'] }
+        : { orderBy?: AssignGptGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, AssignGptGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetAssignGptGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the AssignGpt model
+   */
+  readonly fields: AssignGptFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for AssignGpt.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__AssignGptClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    gpt<T extends GptDefaultArgs<ExtArgs> = {}>(args?: Subset<T, GptDefaultArgs<ExtArgs>>): Prisma__GptClient<$Result.GetResult<Prisma.$GptPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the AssignGpt model
+   */
+  interface AssignGptFieldRefs {
+    readonly id: FieldRef<"AssignGpt", 'String'>
+    readonly userId: FieldRef<"AssignGpt", 'String'>
+    readonly gptId: FieldRef<"AssignGpt", 'String'>
+    readonly assignedAt: FieldRef<"AssignGpt", 'DateTime'>
+    readonly assignedBy: FieldRef<"AssignGpt", 'String'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * AssignGpt findUnique
+   */
+  export type AssignGptFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssignGpt
+     */
+    select?: AssignGptSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AssignGpt
+     */
+    omit?: AssignGptOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AssignGptInclude<ExtArgs> | null
+    /**
+     * Filter, which AssignGpt to fetch.
+     */
+    where: AssignGptWhereUniqueInput
+  }
+
+  /**
+   * AssignGpt findUniqueOrThrow
+   */
+  export type AssignGptFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssignGpt
+     */
+    select?: AssignGptSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AssignGpt
+     */
+    omit?: AssignGptOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AssignGptInclude<ExtArgs> | null
+    /**
+     * Filter, which AssignGpt to fetch.
+     */
+    where: AssignGptWhereUniqueInput
+  }
+
+  /**
+   * AssignGpt findFirst
+   */
+  export type AssignGptFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssignGpt
+     */
+    select?: AssignGptSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AssignGpt
+     */
+    omit?: AssignGptOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AssignGptInclude<ExtArgs> | null
+    /**
+     * Filter, which AssignGpt to fetch.
+     */
+    where?: AssignGptWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AssignGpts to fetch.
+     */
+    orderBy?: AssignGptOrderByWithRelationInput | AssignGptOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for AssignGpts.
+     */
+    cursor?: AssignGptWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AssignGpts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AssignGpts.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of AssignGpts.
+     */
+    distinct?: AssignGptScalarFieldEnum | AssignGptScalarFieldEnum[]
+  }
+
+  /**
+   * AssignGpt findFirstOrThrow
+   */
+  export type AssignGptFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssignGpt
+     */
+    select?: AssignGptSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AssignGpt
+     */
+    omit?: AssignGptOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AssignGptInclude<ExtArgs> | null
+    /**
+     * Filter, which AssignGpt to fetch.
+     */
+    where?: AssignGptWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AssignGpts to fetch.
+     */
+    orderBy?: AssignGptOrderByWithRelationInput | AssignGptOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for AssignGpts.
+     */
+    cursor?: AssignGptWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AssignGpts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AssignGpts.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of AssignGpts.
+     */
+    distinct?: AssignGptScalarFieldEnum | AssignGptScalarFieldEnum[]
+  }
+
+  /**
+   * AssignGpt findMany
+   */
+  export type AssignGptFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssignGpt
+     */
+    select?: AssignGptSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AssignGpt
+     */
+    omit?: AssignGptOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AssignGptInclude<ExtArgs> | null
+    /**
+     * Filter, which AssignGpts to fetch.
+     */
+    where?: AssignGptWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AssignGpts to fetch.
+     */
+    orderBy?: AssignGptOrderByWithRelationInput | AssignGptOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing AssignGpts.
+     */
+    cursor?: AssignGptWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AssignGpts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AssignGpts.
+     */
+    skip?: number
+    distinct?: AssignGptScalarFieldEnum | AssignGptScalarFieldEnum[]
+  }
+
+  /**
+   * AssignGpt create
+   */
+  export type AssignGptCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssignGpt
+     */
+    select?: AssignGptSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AssignGpt
+     */
+    omit?: AssignGptOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AssignGptInclude<ExtArgs> | null
+    /**
+     * The data needed to create a AssignGpt.
+     */
+    data: XOR<AssignGptCreateInput, AssignGptUncheckedCreateInput>
+  }
+
+  /**
+   * AssignGpt createMany
+   */
+  export type AssignGptCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many AssignGpts.
+     */
+    data: AssignGptCreateManyInput | AssignGptCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * AssignGpt createManyAndReturn
+   */
+  export type AssignGptCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssignGpt
+     */
+    select?: AssignGptSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the AssignGpt
+     */
+    omit?: AssignGptOmit<ExtArgs> | null
+    /**
+     * The data used to create many AssignGpts.
+     */
+    data: AssignGptCreateManyInput | AssignGptCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AssignGptIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * AssignGpt update
+   */
+  export type AssignGptUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssignGpt
+     */
+    select?: AssignGptSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AssignGpt
+     */
+    omit?: AssignGptOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AssignGptInclude<ExtArgs> | null
+    /**
+     * The data needed to update a AssignGpt.
+     */
+    data: XOR<AssignGptUpdateInput, AssignGptUncheckedUpdateInput>
+    /**
+     * Choose, which AssignGpt to update.
+     */
+    where: AssignGptWhereUniqueInput
+  }
+
+  /**
+   * AssignGpt updateMany
+   */
+  export type AssignGptUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update AssignGpts.
+     */
+    data: XOR<AssignGptUpdateManyMutationInput, AssignGptUncheckedUpdateManyInput>
+    /**
+     * Filter which AssignGpts to update
+     */
+    where?: AssignGptWhereInput
+    /**
+     * Limit how many AssignGpts to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * AssignGpt updateManyAndReturn
+   */
+  export type AssignGptUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssignGpt
+     */
+    select?: AssignGptSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the AssignGpt
+     */
+    omit?: AssignGptOmit<ExtArgs> | null
+    /**
+     * The data used to update AssignGpts.
+     */
+    data: XOR<AssignGptUpdateManyMutationInput, AssignGptUncheckedUpdateManyInput>
+    /**
+     * Filter which AssignGpts to update
+     */
+    where?: AssignGptWhereInput
+    /**
+     * Limit how many AssignGpts to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AssignGptIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * AssignGpt upsert
+   */
+  export type AssignGptUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssignGpt
+     */
+    select?: AssignGptSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AssignGpt
+     */
+    omit?: AssignGptOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AssignGptInclude<ExtArgs> | null
+    /**
+     * The filter to search for the AssignGpt to update in case it exists.
+     */
+    where: AssignGptWhereUniqueInput
+    /**
+     * In case the AssignGpt found by the `where` argument doesn't exist, create a new AssignGpt with this data.
+     */
+    create: XOR<AssignGptCreateInput, AssignGptUncheckedCreateInput>
+    /**
+     * In case the AssignGpt was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<AssignGptUpdateInput, AssignGptUncheckedUpdateInput>
+  }
+
+  /**
+   * AssignGpt delete
+   */
+  export type AssignGptDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssignGpt
+     */
+    select?: AssignGptSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AssignGpt
+     */
+    omit?: AssignGptOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AssignGptInclude<ExtArgs> | null
+    /**
+     * Filter which AssignGpt to delete.
+     */
+    where: AssignGptWhereUniqueInput
+  }
+
+  /**
+   * AssignGpt deleteMany
+   */
+  export type AssignGptDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which AssignGpts to delete
+     */
+    where?: AssignGptWhereInput
+    /**
+     * Limit how many AssignGpts to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * AssignGpt without action
+   */
+  export type AssignGptDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssignGpt
+     */
+    select?: AssignGptSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AssignGpt
+     */
+    omit?: AssignGptOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: AssignGptInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -8248,6 +9503,17 @@ export namespace Prisma {
   };
 
   export type InvitationScalarFieldEnum = (typeof InvitationScalarFieldEnum)[keyof typeof InvitationScalarFieldEnum]
+
+
+  export const AssignGptScalarFieldEnum: {
+    id: 'id',
+    userId: 'userId',
+    gptId: 'gptId',
+    assignedAt: 'assignedAt',
+    assignedBy: 'assignedBy'
+  };
+
+  export type AssignGptScalarFieldEnum = (typeof AssignGptScalarFieldEnum)[keyof typeof AssignGptScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -8394,6 +9660,7 @@ export namespace Prisma {
     sessions?: SessionListRelationFilter
     accounts?: AccountListRelationFilter
     Gpt?: GptListRelationFilter
+    assignedGpts?: AssignGptListRelationFilter
   }
 
   export type UserOrderByWithRelationInput = {
@@ -8411,6 +9678,7 @@ export namespace Prisma {
     sessions?: SessionOrderByRelationAggregateInput
     accounts?: AccountOrderByRelationAggregateInput
     Gpt?: GptOrderByRelationAggregateInput
+    assignedGpts?: AssignGptOrderByRelationAggregateInput
   }
 
   export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -8431,6 +9699,7 @@ export namespace Prisma {
     sessions?: SessionListRelationFilter
     accounts?: AccountListRelationFilter
     Gpt?: GptListRelationFilter
+    assignedGpts?: AssignGptListRelationFilter
   }, "id" | "email">
 
   export type UserOrderByWithAggregationInput = {
@@ -8713,6 +9982,7 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"Gpt"> | Date | string
     updatedAt?: DateTimeFilter<"Gpt"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    assignedToUsers?: AssignGptListRelationFilter
   }
 
   export type GptOrderByWithRelationInput = {
@@ -8731,6 +10001,7 @@ export namespace Prisma {
     createdAt?: SortOrder
     updatedAt?: SortOrder
     user?: UserOrderByWithRelationInput
+    assignedToUsers?: AssignGptOrderByRelationAggregateInput
   }
 
   export type GptWhereUniqueInput = Prisma.AtLeast<{
@@ -8752,6 +10023,7 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"Gpt"> | Date | string
     updatedAt?: DateTimeFilter<"Gpt"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    assignedToUsers?: AssignGptListRelationFilter
   }, "id">
 
   export type GptOrderByWithAggregationInput = {
@@ -8881,6 +10153,65 @@ export namespace Prisma {
     acceptedBy?: StringNullableWithAggregatesFilter<"Invitation"> | string | null
   }
 
+  export type AssignGptWhereInput = {
+    AND?: AssignGptWhereInput | AssignGptWhereInput[]
+    OR?: AssignGptWhereInput[]
+    NOT?: AssignGptWhereInput | AssignGptWhereInput[]
+    id?: StringFilter<"AssignGpt"> | string
+    userId?: StringFilter<"AssignGpt"> | string
+    gptId?: StringFilter<"AssignGpt"> | string
+    assignedAt?: DateTimeFilter<"AssignGpt"> | Date | string
+    assignedBy?: StringFilter<"AssignGpt"> | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    gpt?: XOR<GptScalarRelationFilter, GptWhereInput>
+  }
+
+  export type AssignGptOrderByWithRelationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    gptId?: SortOrder
+    assignedAt?: SortOrder
+    assignedBy?: SortOrder
+    user?: UserOrderByWithRelationInput
+    gpt?: GptOrderByWithRelationInput
+  }
+
+  export type AssignGptWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    userId_gptId?: AssignGptUserIdGptIdCompoundUniqueInput
+    AND?: AssignGptWhereInput | AssignGptWhereInput[]
+    OR?: AssignGptWhereInput[]
+    NOT?: AssignGptWhereInput | AssignGptWhereInput[]
+    userId?: StringFilter<"AssignGpt"> | string
+    gptId?: StringFilter<"AssignGpt"> | string
+    assignedAt?: DateTimeFilter<"AssignGpt"> | Date | string
+    assignedBy?: StringFilter<"AssignGpt"> | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    gpt?: XOR<GptScalarRelationFilter, GptWhereInput>
+  }, "id" | "userId_gptId">
+
+  export type AssignGptOrderByWithAggregationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    gptId?: SortOrder
+    assignedAt?: SortOrder
+    assignedBy?: SortOrder
+    _count?: AssignGptCountOrderByAggregateInput
+    _max?: AssignGptMaxOrderByAggregateInput
+    _min?: AssignGptMinOrderByAggregateInput
+  }
+
+  export type AssignGptScalarWhereWithAggregatesInput = {
+    AND?: AssignGptScalarWhereWithAggregatesInput | AssignGptScalarWhereWithAggregatesInput[]
+    OR?: AssignGptScalarWhereWithAggregatesInput[]
+    NOT?: AssignGptScalarWhereWithAggregatesInput | AssignGptScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"AssignGpt"> | string
+    userId?: StringWithAggregatesFilter<"AssignGpt"> | string
+    gptId?: StringWithAggregatesFilter<"AssignGpt"> | string
+    assignedAt?: DateTimeWithAggregatesFilter<"AssignGpt"> | Date | string
+    assignedBy?: StringWithAggregatesFilter<"AssignGpt"> | string
+  }
+
   export type UserCreateInput = {
     id?: string
     name: string
@@ -8896,6 +10227,7 @@ export namespace Prisma {
     sessions?: SessionCreateNestedManyWithoutUserInput
     accounts?: AccountCreateNestedManyWithoutUserInput
     Gpt?: GptCreateNestedManyWithoutUserInput
+    assignedGpts?: AssignGptCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateInput = {
@@ -8913,6 +10245,7 @@ export namespace Prisma {
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     Gpt?: GptUncheckedCreateNestedManyWithoutUserInput
+    assignedGpts?: AssignGptUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserUpdateInput = {
@@ -8930,6 +10263,7 @@ export namespace Prisma {
     sessions?: SessionUpdateManyWithoutUserNestedInput
     accounts?: AccountUpdateManyWithoutUserNestedInput
     Gpt?: GptUpdateManyWithoutUserNestedInput
+    assignedGpts?: AssignGptUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateInput = {
@@ -8947,6 +10281,7 @@ export namespace Prisma {
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     Gpt?: GptUncheckedUpdateManyWithoutUserNestedInput
+    assignedGpts?: AssignGptUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateManyInput = {
@@ -9263,6 +10598,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutGptInput
+    assignedToUsers?: AssignGptCreateNestedManyWithoutGptInput
   }
 
   export type GptUncheckedCreateInput = {
@@ -9280,6 +10616,7 @@ export namespace Prisma {
     knowledgeBase?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    assignedToUsers?: AssignGptUncheckedCreateNestedManyWithoutGptInput
   }
 
   export type GptUpdateInput = {
@@ -9297,6 +10634,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutGptNestedInput
+    assignedToUsers?: AssignGptUpdateManyWithoutGptNestedInput
   }
 
   export type GptUncheckedUpdateInput = {
@@ -9314,6 +10652,7 @@ export namespace Prisma {
     knowledgeBase?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedToUsers?: AssignGptUncheckedUpdateManyWithoutGptNestedInput
   }
 
   export type GptCreateManyInput = {
@@ -9471,6 +10810,60 @@ export namespace Prisma {
     acceptedBy?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
+  export type AssignGptCreateInput = {
+    id?: string
+    assignedAt?: Date | string
+    assignedBy: string
+    user: UserCreateNestedOneWithoutAssignedGptsInput
+    gpt: GptCreateNestedOneWithoutAssignedToUsersInput
+  }
+
+  export type AssignGptUncheckedCreateInput = {
+    id?: string
+    userId: string
+    gptId: string
+    assignedAt?: Date | string
+    assignedBy: string
+  }
+
+  export type AssignGptUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    assignedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedBy?: StringFieldUpdateOperationsInput | string
+    user?: UserUpdateOneRequiredWithoutAssignedGptsNestedInput
+    gpt?: GptUpdateOneRequiredWithoutAssignedToUsersNestedInput
+  }
+
+  export type AssignGptUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    gptId?: StringFieldUpdateOperationsInput | string
+    assignedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedBy?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type AssignGptCreateManyInput = {
+    id?: string
+    userId: string
+    gptId: string
+    assignedAt?: Date | string
+    assignedBy: string
+  }
+
+  export type AssignGptUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    assignedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedBy?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type AssignGptUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    gptId?: StringFieldUpdateOperationsInput | string
+    assignedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedBy?: StringFieldUpdateOperationsInput | string
+  }
+
   export type StringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -9546,6 +10939,12 @@ export namespace Prisma {
     none?: GptWhereInput
   }
 
+  export type AssignGptListRelationFilter = {
+    every?: AssignGptWhereInput
+    some?: AssignGptWhereInput
+    none?: AssignGptWhereInput
+  }
+
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
@@ -9560,6 +10959,10 @@ export namespace Prisma {
   }
 
   export type GptOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type AssignGptOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -9953,6 +11356,40 @@ export namespace Prisma {
     acceptedBy?: SortOrder
   }
 
+  export type GptScalarRelationFilter = {
+    is?: GptWhereInput
+    isNot?: GptWhereInput
+  }
+
+  export type AssignGptUserIdGptIdCompoundUniqueInput = {
+    userId: string
+    gptId: string
+  }
+
+  export type AssignGptCountOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    gptId?: SortOrder
+    assignedAt?: SortOrder
+    assignedBy?: SortOrder
+  }
+
+  export type AssignGptMaxOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    gptId?: SortOrder
+    assignedAt?: SortOrder
+    assignedBy?: SortOrder
+  }
+
+  export type AssignGptMinOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    gptId?: SortOrder
+    assignedAt?: SortOrder
+    assignedBy?: SortOrder
+  }
+
   export type SessionCreateNestedManyWithoutUserInput = {
     create?: XOR<SessionCreateWithoutUserInput, SessionUncheckedCreateWithoutUserInput> | SessionCreateWithoutUserInput[] | SessionUncheckedCreateWithoutUserInput[]
     connectOrCreate?: SessionCreateOrConnectWithoutUserInput | SessionCreateOrConnectWithoutUserInput[]
@@ -9974,6 +11411,13 @@ export namespace Prisma {
     connect?: GptWhereUniqueInput | GptWhereUniqueInput[]
   }
 
+  export type AssignGptCreateNestedManyWithoutUserInput = {
+    create?: XOR<AssignGptCreateWithoutUserInput, AssignGptUncheckedCreateWithoutUserInput> | AssignGptCreateWithoutUserInput[] | AssignGptUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: AssignGptCreateOrConnectWithoutUserInput | AssignGptCreateOrConnectWithoutUserInput[]
+    createMany?: AssignGptCreateManyUserInputEnvelope
+    connect?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+  }
+
   export type SessionUncheckedCreateNestedManyWithoutUserInput = {
     create?: XOR<SessionCreateWithoutUserInput, SessionUncheckedCreateWithoutUserInput> | SessionCreateWithoutUserInput[] | SessionUncheckedCreateWithoutUserInput[]
     connectOrCreate?: SessionCreateOrConnectWithoutUserInput | SessionCreateOrConnectWithoutUserInput[]
@@ -9993,6 +11437,13 @@ export namespace Prisma {
     connectOrCreate?: GptCreateOrConnectWithoutUserInput | GptCreateOrConnectWithoutUserInput[]
     createMany?: GptCreateManyUserInputEnvelope
     connect?: GptWhereUniqueInput | GptWhereUniqueInput[]
+  }
+
+  export type AssignGptUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<AssignGptCreateWithoutUserInput, AssignGptUncheckedCreateWithoutUserInput> | AssignGptCreateWithoutUserInput[] | AssignGptUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: AssignGptCreateOrConnectWithoutUserInput | AssignGptCreateOrConnectWithoutUserInput[]
+    createMany?: AssignGptCreateManyUserInputEnvelope
+    connect?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
   }
 
   export type StringFieldUpdateOperationsInput = {
@@ -10057,6 +11508,20 @@ export namespace Prisma {
     deleteMany?: GptScalarWhereInput | GptScalarWhereInput[]
   }
 
+  export type AssignGptUpdateManyWithoutUserNestedInput = {
+    create?: XOR<AssignGptCreateWithoutUserInput, AssignGptUncheckedCreateWithoutUserInput> | AssignGptCreateWithoutUserInput[] | AssignGptUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: AssignGptCreateOrConnectWithoutUserInput | AssignGptCreateOrConnectWithoutUserInput[]
+    upsert?: AssignGptUpsertWithWhereUniqueWithoutUserInput | AssignGptUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: AssignGptCreateManyUserInputEnvelope
+    set?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+    disconnect?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+    delete?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+    connect?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+    update?: AssignGptUpdateWithWhereUniqueWithoutUserInput | AssignGptUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: AssignGptUpdateManyWithWhereWithoutUserInput | AssignGptUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: AssignGptScalarWhereInput | AssignGptScalarWhereInput[]
+  }
+
   export type SessionUncheckedUpdateManyWithoutUserNestedInput = {
     create?: XOR<SessionCreateWithoutUserInput, SessionUncheckedCreateWithoutUserInput> | SessionCreateWithoutUserInput[] | SessionUncheckedCreateWithoutUserInput[]
     connectOrCreate?: SessionCreateOrConnectWithoutUserInput | SessionCreateOrConnectWithoutUserInput[]
@@ -10099,6 +11564,20 @@ export namespace Prisma {
     deleteMany?: GptScalarWhereInput | GptScalarWhereInput[]
   }
 
+  export type AssignGptUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<AssignGptCreateWithoutUserInput, AssignGptUncheckedCreateWithoutUserInput> | AssignGptCreateWithoutUserInput[] | AssignGptUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: AssignGptCreateOrConnectWithoutUserInput | AssignGptCreateOrConnectWithoutUserInput[]
+    upsert?: AssignGptUpsertWithWhereUniqueWithoutUserInput | AssignGptUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: AssignGptCreateManyUserInputEnvelope
+    set?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+    disconnect?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+    delete?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+    connect?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+    update?: AssignGptUpdateWithWhereUniqueWithoutUserInput | AssignGptUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: AssignGptUpdateManyWithWhereWithoutUserInput | AssignGptUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: AssignGptScalarWhereInput | AssignGptScalarWhereInput[]
+  }
+
   export type UserCreateNestedOneWithoutSessionsInput = {
     create?: XOR<UserCreateWithoutSessionsInput, UserUncheckedCreateWithoutSessionsInput>
     connectOrCreate?: UserCreateOrConnectWithoutSessionsInput
@@ -10133,6 +11612,20 @@ export namespace Prisma {
     connect?: UserWhereUniqueInput
   }
 
+  export type AssignGptCreateNestedManyWithoutGptInput = {
+    create?: XOR<AssignGptCreateWithoutGptInput, AssignGptUncheckedCreateWithoutGptInput> | AssignGptCreateWithoutGptInput[] | AssignGptUncheckedCreateWithoutGptInput[]
+    connectOrCreate?: AssignGptCreateOrConnectWithoutGptInput | AssignGptCreateOrConnectWithoutGptInput[]
+    createMany?: AssignGptCreateManyGptInputEnvelope
+    connect?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+  }
+
+  export type AssignGptUncheckedCreateNestedManyWithoutGptInput = {
+    create?: XOR<AssignGptCreateWithoutGptInput, AssignGptUncheckedCreateWithoutGptInput> | AssignGptCreateWithoutGptInput[] | AssignGptUncheckedCreateWithoutGptInput[]
+    connectOrCreate?: AssignGptCreateOrConnectWithoutGptInput | AssignGptCreateOrConnectWithoutGptInput[]
+    createMany?: AssignGptCreateManyGptInputEnvelope
+    connect?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+  }
+
   export type EnumModelEnumFieldUpdateOperationsInput = {
     set?: $Enums.ModelEnum
   }
@@ -10143,6 +11636,62 @@ export namespace Prisma {
     upsert?: UserUpsertWithoutGptInput
     connect?: UserWhereUniqueInput
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutGptInput, UserUpdateWithoutGptInput>, UserUncheckedUpdateWithoutGptInput>
+  }
+
+  export type AssignGptUpdateManyWithoutGptNestedInput = {
+    create?: XOR<AssignGptCreateWithoutGptInput, AssignGptUncheckedCreateWithoutGptInput> | AssignGptCreateWithoutGptInput[] | AssignGptUncheckedCreateWithoutGptInput[]
+    connectOrCreate?: AssignGptCreateOrConnectWithoutGptInput | AssignGptCreateOrConnectWithoutGptInput[]
+    upsert?: AssignGptUpsertWithWhereUniqueWithoutGptInput | AssignGptUpsertWithWhereUniqueWithoutGptInput[]
+    createMany?: AssignGptCreateManyGptInputEnvelope
+    set?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+    disconnect?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+    delete?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+    connect?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+    update?: AssignGptUpdateWithWhereUniqueWithoutGptInput | AssignGptUpdateWithWhereUniqueWithoutGptInput[]
+    updateMany?: AssignGptUpdateManyWithWhereWithoutGptInput | AssignGptUpdateManyWithWhereWithoutGptInput[]
+    deleteMany?: AssignGptScalarWhereInput | AssignGptScalarWhereInput[]
+  }
+
+  export type AssignGptUncheckedUpdateManyWithoutGptNestedInput = {
+    create?: XOR<AssignGptCreateWithoutGptInput, AssignGptUncheckedCreateWithoutGptInput> | AssignGptCreateWithoutGptInput[] | AssignGptUncheckedCreateWithoutGptInput[]
+    connectOrCreate?: AssignGptCreateOrConnectWithoutGptInput | AssignGptCreateOrConnectWithoutGptInput[]
+    upsert?: AssignGptUpsertWithWhereUniqueWithoutGptInput | AssignGptUpsertWithWhereUniqueWithoutGptInput[]
+    createMany?: AssignGptCreateManyGptInputEnvelope
+    set?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+    disconnect?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+    delete?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+    connect?: AssignGptWhereUniqueInput | AssignGptWhereUniqueInput[]
+    update?: AssignGptUpdateWithWhereUniqueWithoutGptInput | AssignGptUpdateWithWhereUniqueWithoutGptInput[]
+    updateMany?: AssignGptUpdateManyWithWhereWithoutGptInput | AssignGptUpdateManyWithWhereWithoutGptInput[]
+    deleteMany?: AssignGptScalarWhereInput | AssignGptScalarWhereInput[]
+  }
+
+  export type UserCreateNestedOneWithoutAssignedGptsInput = {
+    create?: XOR<UserCreateWithoutAssignedGptsInput, UserUncheckedCreateWithoutAssignedGptsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutAssignedGptsInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type GptCreateNestedOneWithoutAssignedToUsersInput = {
+    create?: XOR<GptCreateWithoutAssignedToUsersInput, GptUncheckedCreateWithoutAssignedToUsersInput>
+    connectOrCreate?: GptCreateOrConnectWithoutAssignedToUsersInput
+    connect?: GptWhereUniqueInput
+  }
+
+  export type UserUpdateOneRequiredWithoutAssignedGptsNestedInput = {
+    create?: XOR<UserCreateWithoutAssignedGptsInput, UserUncheckedCreateWithoutAssignedGptsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutAssignedGptsInput
+    upsert?: UserUpsertWithoutAssignedGptsInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutAssignedGptsInput, UserUpdateWithoutAssignedGptsInput>, UserUncheckedUpdateWithoutAssignedGptsInput>
+  }
+
+  export type GptUpdateOneRequiredWithoutAssignedToUsersNestedInput = {
+    create?: XOR<GptCreateWithoutAssignedToUsersInput, GptUncheckedCreateWithoutAssignedToUsersInput>
+    connectOrCreate?: GptCreateOrConnectWithoutAssignedToUsersInput
+    upsert?: GptUpsertWithoutAssignedToUsersInput
+    connect?: GptWhereUniqueInput
+    update?: XOR<XOR<GptUpdateToOneWithWhereWithoutAssignedToUsersInput, GptUpdateWithoutAssignedToUsersInput>, GptUncheckedUpdateWithoutAssignedToUsersInput>
   }
 
   export type NestedStringFilter<$PrismaModel = never> = {
@@ -10418,6 +11967,7 @@ export namespace Prisma {
     knowledgeBase?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    assignedToUsers?: AssignGptCreateNestedManyWithoutGptInput
   }
 
   export type GptUncheckedCreateWithoutUserInput = {
@@ -10434,6 +11984,7 @@ export namespace Prisma {
     knowledgeBase?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    assignedToUsers?: AssignGptUncheckedCreateNestedManyWithoutGptInput
   }
 
   export type GptCreateOrConnectWithoutUserInput = {
@@ -10443,6 +11994,30 @@ export namespace Prisma {
 
   export type GptCreateManyUserInputEnvelope = {
     data: GptCreateManyUserInput | GptCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type AssignGptCreateWithoutUserInput = {
+    id?: string
+    assignedAt?: Date | string
+    assignedBy: string
+    gpt: GptCreateNestedOneWithoutAssignedToUsersInput
+  }
+
+  export type AssignGptUncheckedCreateWithoutUserInput = {
+    id?: string
+    gptId: string
+    assignedAt?: Date | string
+    assignedBy: string
+  }
+
+  export type AssignGptCreateOrConnectWithoutUserInput = {
+    where: AssignGptWhereUniqueInput
+    create: XOR<AssignGptCreateWithoutUserInput, AssignGptUncheckedCreateWithoutUserInput>
+  }
+
+  export type AssignGptCreateManyUserInputEnvelope = {
+    data: AssignGptCreateManyUserInput | AssignGptCreateManyUserInput[]
     skipDuplicates?: boolean
   }
 
@@ -10548,6 +12123,33 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"Gpt"> | Date | string
   }
 
+  export type AssignGptUpsertWithWhereUniqueWithoutUserInput = {
+    where: AssignGptWhereUniqueInput
+    update: XOR<AssignGptUpdateWithoutUserInput, AssignGptUncheckedUpdateWithoutUserInput>
+    create: XOR<AssignGptCreateWithoutUserInput, AssignGptUncheckedCreateWithoutUserInput>
+  }
+
+  export type AssignGptUpdateWithWhereUniqueWithoutUserInput = {
+    where: AssignGptWhereUniqueInput
+    data: XOR<AssignGptUpdateWithoutUserInput, AssignGptUncheckedUpdateWithoutUserInput>
+  }
+
+  export type AssignGptUpdateManyWithWhereWithoutUserInput = {
+    where: AssignGptScalarWhereInput
+    data: XOR<AssignGptUpdateManyMutationInput, AssignGptUncheckedUpdateManyWithoutUserInput>
+  }
+
+  export type AssignGptScalarWhereInput = {
+    AND?: AssignGptScalarWhereInput | AssignGptScalarWhereInput[]
+    OR?: AssignGptScalarWhereInput[]
+    NOT?: AssignGptScalarWhereInput | AssignGptScalarWhereInput[]
+    id?: StringFilter<"AssignGpt"> | string
+    userId?: StringFilter<"AssignGpt"> | string
+    gptId?: StringFilter<"AssignGpt"> | string
+    assignedAt?: DateTimeFilter<"AssignGpt"> | Date | string
+    assignedBy?: StringFilter<"AssignGpt"> | string
+  }
+
   export type UserCreateWithoutSessionsInput = {
     id?: string
     name: string
@@ -10562,6 +12164,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     accounts?: AccountCreateNestedManyWithoutUserInput
     Gpt?: GptCreateNestedManyWithoutUserInput
+    assignedGpts?: AssignGptCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutSessionsInput = {
@@ -10578,6 +12181,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     Gpt?: GptUncheckedCreateNestedManyWithoutUserInput
+    assignedGpts?: AssignGptUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutSessionsInput = {
@@ -10610,6 +12214,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
     Gpt?: GptUpdateManyWithoutUserNestedInput
+    assignedGpts?: AssignGptUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -10626,6 +12231,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     Gpt?: GptUncheckedUpdateManyWithoutUserNestedInput
+    assignedGpts?: AssignGptUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutAccountsInput = {
@@ -10642,6 +12248,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     sessions?: SessionCreateNestedManyWithoutUserInput
     Gpt?: GptCreateNestedManyWithoutUserInput
+    assignedGpts?: AssignGptCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutAccountsInput = {
@@ -10658,6 +12265,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     Gpt?: GptUncheckedCreateNestedManyWithoutUserInput
+    assignedGpts?: AssignGptUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutAccountsInput = {
@@ -10690,6 +12298,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     sessions?: SessionUpdateManyWithoutUserNestedInput
     Gpt?: GptUpdateManyWithoutUserNestedInput
+    assignedGpts?: AssignGptUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAccountsInput = {
@@ -10706,6 +12315,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     Gpt?: GptUncheckedUpdateManyWithoutUserNestedInput
+    assignedGpts?: AssignGptUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutGptInput = {
@@ -10722,6 +12332,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     sessions?: SessionCreateNestedManyWithoutUserInput
     accounts?: AccountCreateNestedManyWithoutUserInput
+    assignedGpts?: AssignGptCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutGptInput = {
@@ -10738,11 +12349,36 @@ export namespace Prisma {
     updatedAt?: Date | string
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
+    assignedGpts?: AssignGptUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutGptInput = {
     where: UserWhereUniqueInput
     create: XOR<UserCreateWithoutGptInput, UserUncheckedCreateWithoutGptInput>
+  }
+
+  export type AssignGptCreateWithoutGptInput = {
+    id?: string
+    assignedAt?: Date | string
+    assignedBy: string
+    user: UserCreateNestedOneWithoutAssignedGptsInput
+  }
+
+  export type AssignGptUncheckedCreateWithoutGptInput = {
+    id?: string
+    userId: string
+    assignedAt?: Date | string
+    assignedBy: string
+  }
+
+  export type AssignGptCreateOrConnectWithoutGptInput = {
+    where: AssignGptWhereUniqueInput
+    create: XOR<AssignGptCreateWithoutGptInput, AssignGptUncheckedCreateWithoutGptInput>
+  }
+
+  export type AssignGptCreateManyGptInputEnvelope = {
+    data: AssignGptCreateManyGptInput | AssignGptCreateManyGptInput[]
+    skipDuplicates?: boolean
   }
 
   export type UserUpsertWithoutGptInput = {
@@ -10770,6 +12406,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     sessions?: SessionUpdateManyWithoutUserNestedInput
     accounts?: AccountUpdateManyWithoutUserNestedInput
+    assignedGpts?: AssignGptUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutGptInput = {
@@ -10786,6 +12423,191 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
+    assignedGpts?: AssignGptUncheckedUpdateManyWithoutUserNestedInput
+  }
+
+  export type AssignGptUpsertWithWhereUniqueWithoutGptInput = {
+    where: AssignGptWhereUniqueInput
+    update: XOR<AssignGptUpdateWithoutGptInput, AssignGptUncheckedUpdateWithoutGptInput>
+    create: XOR<AssignGptCreateWithoutGptInput, AssignGptUncheckedCreateWithoutGptInput>
+  }
+
+  export type AssignGptUpdateWithWhereUniqueWithoutGptInput = {
+    where: AssignGptWhereUniqueInput
+    data: XOR<AssignGptUpdateWithoutGptInput, AssignGptUncheckedUpdateWithoutGptInput>
+  }
+
+  export type AssignGptUpdateManyWithWhereWithoutGptInput = {
+    where: AssignGptScalarWhereInput
+    data: XOR<AssignGptUpdateManyMutationInput, AssignGptUncheckedUpdateManyWithoutGptInput>
+  }
+
+  export type UserCreateWithoutAssignedGptsInput = {
+    id?: string
+    name: string
+    email: string
+    role?: string
+    banned?: boolean
+    banReason?: string | null
+    banExpires?: Date | string | null
+    emailVerified?: boolean
+    image?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    sessions?: SessionCreateNestedManyWithoutUserInput
+    accounts?: AccountCreateNestedManyWithoutUserInput
+    Gpt?: GptCreateNestedManyWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutAssignedGptsInput = {
+    id?: string
+    name: string
+    email: string
+    role?: string
+    banned?: boolean
+    banReason?: string | null
+    banExpires?: Date | string | null
+    emailVerified?: boolean
+    image?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
+    Gpt?: GptUncheckedCreateNestedManyWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutAssignedGptsInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutAssignedGptsInput, UserUncheckedCreateWithoutAssignedGptsInput>
+  }
+
+  export type GptCreateWithoutAssignedToUsersInput = {
+    id?: string
+    name: string
+    description: string
+    model: $Enums.ModelEnum
+    instruction: string
+    webBrowser?: boolean
+    hybridRag?: boolean
+    mcp?: boolean
+    mcpSchema?: NullableJsonNullValueInput | InputJsonValue
+    image: string
+    knowledgeBase?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutGptInput
+  }
+
+  export type GptUncheckedCreateWithoutAssignedToUsersInput = {
+    id?: string
+    userId: string
+    name: string
+    description: string
+    model: $Enums.ModelEnum
+    instruction: string
+    webBrowser?: boolean
+    hybridRag?: boolean
+    mcp?: boolean
+    mcpSchema?: NullableJsonNullValueInput | InputJsonValue
+    image: string
+    knowledgeBase?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type GptCreateOrConnectWithoutAssignedToUsersInput = {
+    where: GptWhereUniqueInput
+    create: XOR<GptCreateWithoutAssignedToUsersInput, GptUncheckedCreateWithoutAssignedToUsersInput>
+  }
+
+  export type UserUpsertWithoutAssignedGptsInput = {
+    update: XOR<UserUpdateWithoutAssignedGptsInput, UserUncheckedUpdateWithoutAssignedGptsInput>
+    create: XOR<UserCreateWithoutAssignedGptsInput, UserUncheckedCreateWithoutAssignedGptsInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutAssignedGptsInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutAssignedGptsInput, UserUncheckedUpdateWithoutAssignedGptsInput>
+  }
+
+  export type UserUpdateWithoutAssignedGptsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    role?: StringFieldUpdateOperationsInput | string
+    banned?: BoolFieldUpdateOperationsInput | boolean
+    banReason?: NullableStringFieldUpdateOperationsInput | string | null
+    banExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    image?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    sessions?: SessionUpdateManyWithoutUserNestedInput
+    accounts?: AccountUpdateManyWithoutUserNestedInput
+    Gpt?: GptUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutAssignedGptsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    role?: StringFieldUpdateOperationsInput | string
+    banned?: BoolFieldUpdateOperationsInput | boolean
+    banReason?: NullableStringFieldUpdateOperationsInput | string | null
+    banExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    image?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
+    accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
+    Gpt?: GptUncheckedUpdateManyWithoutUserNestedInput
+  }
+
+  export type GptUpsertWithoutAssignedToUsersInput = {
+    update: XOR<GptUpdateWithoutAssignedToUsersInput, GptUncheckedUpdateWithoutAssignedToUsersInput>
+    create: XOR<GptCreateWithoutAssignedToUsersInput, GptUncheckedCreateWithoutAssignedToUsersInput>
+    where?: GptWhereInput
+  }
+
+  export type GptUpdateToOneWithWhereWithoutAssignedToUsersInput = {
+    where?: GptWhereInput
+    data: XOR<GptUpdateWithoutAssignedToUsersInput, GptUncheckedUpdateWithoutAssignedToUsersInput>
+  }
+
+  export type GptUpdateWithoutAssignedToUsersInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    model?: EnumModelEnumFieldUpdateOperationsInput | $Enums.ModelEnum
+    instruction?: StringFieldUpdateOperationsInput | string
+    webBrowser?: BoolFieldUpdateOperationsInput | boolean
+    hybridRag?: BoolFieldUpdateOperationsInput | boolean
+    mcp?: BoolFieldUpdateOperationsInput | boolean
+    mcpSchema?: NullableJsonNullValueInput | InputJsonValue
+    image?: StringFieldUpdateOperationsInput | string
+    knowledgeBase?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutGptNestedInput
+  }
+
+  export type GptUncheckedUpdateWithoutAssignedToUsersInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    model?: EnumModelEnumFieldUpdateOperationsInput | $Enums.ModelEnum
+    instruction?: StringFieldUpdateOperationsInput | string
+    webBrowser?: BoolFieldUpdateOperationsInput | boolean
+    hybridRag?: BoolFieldUpdateOperationsInput | boolean
+    mcp?: BoolFieldUpdateOperationsInput | boolean
+    mcpSchema?: NullableJsonNullValueInput | InputJsonValue
+    image?: StringFieldUpdateOperationsInput | string
+    knowledgeBase?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type SessionCreateManyUserInput = {
@@ -10828,6 +12650,13 @@ export namespace Prisma {
     knowledgeBase?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+  }
+
+  export type AssignGptCreateManyUserInput = {
+    id?: string
+    gptId: string
+    assignedAt?: Date | string
+    assignedBy: string
   }
 
   export type SessionUpdateWithoutUserInput = {
@@ -10922,6 +12751,7 @@ export namespace Prisma {
     knowledgeBase?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedToUsers?: AssignGptUpdateManyWithoutGptNestedInput
   }
 
   export type GptUncheckedUpdateWithoutUserInput = {
@@ -10938,6 +12768,7 @@ export namespace Prisma {
     knowledgeBase?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedToUsers?: AssignGptUncheckedUpdateManyWithoutGptNestedInput
   }
 
   export type GptUncheckedUpdateManyWithoutUserInput = {
@@ -10954,6 +12785,55 @@ export namespace Prisma {
     knowledgeBase?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AssignGptUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    assignedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedBy?: StringFieldUpdateOperationsInput | string
+    gpt?: GptUpdateOneRequiredWithoutAssignedToUsersNestedInput
+  }
+
+  export type AssignGptUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    gptId?: StringFieldUpdateOperationsInput | string
+    assignedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedBy?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type AssignGptUncheckedUpdateManyWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    gptId?: StringFieldUpdateOperationsInput | string
+    assignedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedBy?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type AssignGptCreateManyGptInput = {
+    id?: string
+    userId: string
+    assignedAt?: Date | string
+    assignedBy: string
+  }
+
+  export type AssignGptUpdateWithoutGptInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    assignedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedBy?: StringFieldUpdateOperationsInput | string
+    user?: UserUpdateOneRequiredWithoutAssignedGptsNestedInput
+  }
+
+  export type AssignGptUncheckedUpdateWithoutGptInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    assignedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedBy?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type AssignGptUncheckedUpdateManyWithoutGptInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    assignedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    assignedBy?: StringFieldUpdateOperationsInput | string
   }
 
 

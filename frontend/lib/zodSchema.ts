@@ -101,3 +101,10 @@ export const teamMemberInviteSchema = z.object({
 
 export type TeamMemberUpdateValues = z.infer<typeof teamMemberUpdateSchema>;
 export type TeamMemberInviteValues = z.infer<typeof teamMemberInviteSchema>;
+
+export const assignGptSchema = z.object({
+  userId: z.string(),
+  gptIds: z.array(z.string()).min(1, "Select at least one GPT")
+});
+
+export type AssignGptValues = z.infer<typeof assignGptSchema>;

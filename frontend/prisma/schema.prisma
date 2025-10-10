@@ -23,6 +23,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
   Gpt           Gpt[]
+  assignedGpts  AssignGpt[]
 
   @@unique([email])
   @@map("user")
@@ -90,6 +91,7 @@ model Gpt {
   knowledgeBase String? 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  assignedToUsers AssignGpt[]
 }
 
 model Invitation {
@@ -107,6 +109,19 @@ model Invitation {
   acceptedBy String? 
 
   @@map("invitation")
+}
+
+model AssignGpt {
+  id         String   @id @default(cuid())
+  userId     String
+  gptId      String
+  assignedAt DateTime @default(now())
+  assignedBy String   // Admin who assigned the GPT
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gpt        Gpt      @relation(fields: [gptId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, gptId])
+  @@map("assign_gpt")
 }
 
 enum ModelEnum {

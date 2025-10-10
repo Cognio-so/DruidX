@@ -23,7 +23,7 @@ class StreamingGraph:
         session_id: str
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
-        Enhanced streaming chat with real-time status updates
+        Enhanced streaming chat with real-time status updates and markdown preservation
         """
         print("=== ENHANCED STREAMING CHAT STARTED ===")
         print(f"Session ID: {session_id}")
@@ -70,18 +70,16 @@ class StreamingGraph:
                             print(f"=== STREAMING RESPONSE FROM {node_name} ===")
                             print(f"Response length: {len(response)}")
                             
-                            # Stream the response in smaller chunks
-                            chunk_size = 3  # Smaller chunks for faster streaming
-                            words = response.split()
-                            
-                            for i in range(0, len(words), chunk_size):
-                                chunk = " ".join(words[i:i+chunk_size]) + " "
+                            # Stream the response by characters to preserve markdown structure
+                            chunk_size = 15  # Stream by characters instead of words
+                            for i in range(0, len(response), chunk_size):
+                                chunk = response[i:i+chunk_size]
                                 yield {
                                     "type": "content",
                                     "data": {
                                         "content": chunk,
-                                        "full_response": " ".join(words[:i+chunk_size]),
-                                        "is_complete": i+chunk_size >= len(words),
+                                        "full_response": response[:i+chunk_size],
+                                        "is_complete": i+chunk_size >= len(response),
                                         "node": node_name
                                     }
                                 }

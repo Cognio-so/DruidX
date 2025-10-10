@@ -35,11 +35,19 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { deleteGptbyId } from "../action";
 
-const modelDisplayNames = {
+const modelDisplayNames: Record<string, string> = {
   gpt_4o: "GPT-4o",
-  gpt_4: "GPT-4",
+  gpt_4: "GPT-4", 
   gpt_5: "GPT-5",
-} as const;
+  gemini_2_5_flash: "Gemini 2.5 Flash",
+  claude_3_5_sonnet: "Claude 3.5 Sonnet",
+  claude_3_5_haiku: "Claude 3.5 Haiku",
+  claude_3_opus: "Claude 3 Opus",
+  o1_preview: "o1 Preview",
+  o1_mini: "o1 Mini",
+  o2_preview: "o2 Preview",
+  o4_mini: "o4 Mini",
+};
 
 interface GptCardProps {
   gpt: Gpt;
@@ -162,8 +170,7 @@ export function GptCard({ gpt }: GptCardProps) {
               </div>
             )}
             <span className="text-purple-500 font-medium text-xs sm:text-sm">
-              {modelDisplayNames[gpt.model] || gpt.model}
-            </span>
+            {modelDisplayNames[gpt.model] || gpt.model}</span>
           </div>
         </div>
 

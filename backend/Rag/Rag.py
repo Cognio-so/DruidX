@@ -14,6 +14,7 @@ import re
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 QDRANT_URL = os.getenv("QDRANT_URL", ":memory:")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
+from llm import get_llm
 
 try:
     if QDRANT_URL == ":memory:":
@@ -383,7 +384,7 @@ Scenario 3: GPT = "General Assistant" (KB has random knowledge)
 4. Default to user_only unless KB is clearly relevant
 """
 
-    llm = ChatOpenAI(model="gpt-5-nano", temperature=0)
+    llm=get_llm(llm_model, 0.1)
     response = await llm.ainvoke([HumanMessage(content=classification_prompt)])
     
     try:
@@ -465,12 +466,9 @@ async def Rag(state: GraphState) -> GraphState:
     temperature = gpt_config.get("temperature", 0.0)
 
     print(f"[RAG] Processing query: {user_query}")
-        # Status: Analyzing query
     await send_status_update(state, "🧠 Analyzing query and selecting sources...", 10)
-    # ==================== SMART SOURCE SELECTION ====================
     has_user_docs = bool(docs)
     has_kb = bool(kb_docs)
-    # print(f"kb-------------", kb_docs)
     source_decision = await intelligent_source_selection(
         user_query=user_query,
         has_user_docs=has_user_docs,
@@ -486,11 +484,10 @@ async def Rag(state: GraphState) -> GraphState:
     print(f"[RAG] Using strategy: {strategy}")
     print(f"[RAG] User Docs: {use_user_docs}, KB: {use_kb}")
     
-    # ==================== CONDITIONAL RETRIEVAL ====================
     user_result = []
     kb_result = []
     
-    # Only retrieve from user docs if decision says so
+    
     tasks = []
 
     if use_user_docs and docs:
@@ -509,7 +506,6 @@ async def Rag(state: GraphState) -> GraphState:
             elif r[0] == "kb":
                 kb_result = r[1]
 
-    # ==================== BUILD ENHANCED CONTEXT ====================
     await send_status_update(state, "🔗 Combining information from sources...", 80)
     ctx = state.get("context") or {}
     sess = ctx.get("session") or {}
@@ -524,7 +520,6 @@ async def Rag(state: GraphState) -> GraphState:
             last_turns.append(f"{speaker}: {content}")
     last_3_text = "\n".join(last_turns[-3:]) or "None"
 
-    # Build context message with source routing info
     context_parts = [f"CONVERSATION CONTEXT:\nSummary: {summary if summary else 'None'}\nLast Turns:\n{last_3_text}"]
     context_parts.append(f"\nUSER QUERY:\n{user_query}")
     context_parts.append(f"\nSOURCE ROUTING DECISION:\nStrategy: {strategy}\nReasoning: {source_decision['reasoning']}")
@@ -540,7 +535,6 @@ async def Rag(state: GraphState) -> GraphState:
 
     final_context_message = HumanMessage(content="\n".join(context_parts))
 
-    # ==================== ENHANCED SYSTEM PROMPT ====================
     enhanced_system_prompt = f"""{base_rag_prompt}
 
 ---
@@ -571,9 +565,9 @@ async def Rag(state: GraphState) -> GraphState:
         final_context_message
     ]
     
-    # ==================== GENERATE RESPONSE ====================
     await send_status_update(state, "🤖 Generating response from retrieved information...", 90)
-    llm = ChatOpenAI(model="gpt-5-mini", temperature=temperature)
+    llm=get_llm(llm_model,0.5)
+    print(f"model named used in rag.....", llm_model)
     ai_response = await llm.ainvoke(final_messages)
     
     state["messages"] = state.get("messages", []) + [ai_response.dict()]
@@ -590,6 +584,6 @@ async def Rag(state: GraphState) -> GraphState:
     })
     
     print(f"[RAG] Response generated using {len(user_result)} user docs, {len(kb_result)} KB chunks")
-        # Status: Complete
+        
     await send_status_update(state, "✅ RAG processing completed", 100)
     return state

@@ -25,22 +25,18 @@ async def SimpleLLm(state: GraphState) -> GraphState:
     try:
         print(f"SimpleLLM processing query: {user_query}")
         print(f"Using model: {llm_model}")
-        
-        # Get the API key inside the function
         google_api_key = os.getenv("GOOGLE_API_KEY", "")
         print(f"Google API Key set: {bool(google_api_key)}")
         if not google_api_key:
             print("No Google API key found, falling back to OpenAI")
-            chat = ChatOpenAI(model=llm_model, temperature=0.3)
+            from llm import get_llm
+            chat=get_llm(llm_model, 0.01)
         else:
-            # Use Gemini
             chat= ChatGoogleGenerativeAI(
                 model="gemini-2.5-flash-lite",
                 temperature=0.3,
                 api_key=google_api_key,
             )
-
-        # Build conversation messages (keep summary + last few turns)
         formatted_history = []
         if summary:
             formatted_history.append(SystemMessage(content=f"Conversation summary so far:\n{summary}"))

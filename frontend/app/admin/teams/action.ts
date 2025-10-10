@@ -8,6 +8,8 @@ import {
   assignGptSchema,
 } from "@/lib/zodSchema";
 import { requireAdmin } from "@/data/requireAdmin";
+import { getAdminGpts } from "@/data/get-admin-gpts";
+import { getUserAssignedGpts } from "@/data/get-user-assigned-gpts";
 
 export async function createInvitation(data: {
   email: string;
@@ -227,6 +229,16 @@ export async function assignGptsToUser(data: {
 
   revalidatePath("/admin/teams");
   return { success: true };
+}
+
+export async function getAdminGptsForAssignment() {
+  await requireAdmin();
+  return await getAdminGpts();
+}
+
+export async function getUserAssignedGptsForAssignment(userId: string) {
+  await requireAdmin();
+  return await getUserAssignedGpts(userId);
 }
 
 

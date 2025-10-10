@@ -6,8 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { assignGptSchema, AssignGptValues } from "@/lib/zodSchema";
 import { TeamMember } from "@/data/get-team-members";
-import { AdminGpt } from "@/data/get-admin-gpts";
-import { UserAssignedGpt } from "@/data/get-user-assigned-gpts";
 import {
   Dialog,
   DialogContent,
@@ -22,15 +20,47 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, SparkleIcon, User, Mail } from "lucide-react";
 import { toast } from "sonner";
-import { assignGptsToUser } from "../action";
-import { getAdminGpts } from "@/data/get-admin-gpts";
-import { getUserAssignedGpts } from "@/data/get-user-assigned-gpts";
+import { 
+  assignGptsToUser, 
+  getAdminGptsForAssignment, 
+  getUserAssignedGptsForAssignment 
+} from "../action";
 
 interface AssignGptDialogProps {
   user: TeamMember | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+// Types for the data we receive from server actions
+type AdminGpt = {
+  id: string;
+  name: string;
+  description: string;
+  model: string;
+  image: string;
+  createdAt: Date;
+  user: {
+    name: string;
+    email: string;
+  };
+};
+
+type UserAssignedGpt = {
+  id: string;
+  userId: string;
+  gptId: string;
+  assignedAt: Date;
+  assignedBy: string;
+  gpt: {
+    id: string;
+    name: string;
+    description: string;
+    model: string;
+    image: string;
+    createdAt: Date;
+  };
+};
 
 export default function AssignGptDialog({ user, open, onOpenChange }: AssignGptDialogProps) {
   const [adminGpts, setAdminGpts] = useState<AdminGpt[]>([]);
@@ -75,8 +105,8 @@ export default function AssignGptDialog({ user, open, onOpenChange }: AssignGptD
     setLoading(true);
     try {
       const [adminGptsData, assignedGptsData] = await Promise.all([
-        getAdminGpts(),
-        getUserAssignedGpts(user.id)
+        getAdminGptsForAssignment(),
+        getUserAssignedGptsForAssignment(user.id)
       ]);
       
       setAdminGpts(adminGptsData);

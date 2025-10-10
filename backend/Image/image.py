@@ -21,7 +21,6 @@ def generate_image(state: GraphState) -> GraphState:
         )
         image_url = None
         if isinstance(output, list):
-
             first = output[0]
             if hasattr(first, "url"):
                 image_url = first.url
@@ -33,7 +32,20 @@ def generate_image(state: GraphState) -> GraphState:
             image_url = str(output)
 
         print("✅ Generated image URL:", image_url)
-        state["response"] = image_url
+        
+        # Store image URL in separate state
+        img_urls = state.get("img_urls", [])
+        img_urls.append(image_url)
+        state["img_urls"] = img_urls
+        
+        # Also store in response for backward compatibility
+        state["response"] = f"Image generated successfully! URL: {image_url}"
+        
+        # Add message to conversation history
+        state.setdefault("messages", []).append({
+            "role": "assistant", 
+            "content": f"Generated image: {image_url}"
+        })
 
     except Exception as e:
         print("❌ Error during image generation:", e)

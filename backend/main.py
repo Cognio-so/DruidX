@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Callable
 import asyncio
 import os
 import uuid
@@ -352,12 +352,17 @@ async def stream_chat(session_id: str, request: ChatRequest):
             try:
                 print("=== STARTING DIRECT GRAPH STREAMING ===")
                 
+                # Create a variable to store the final state
+                final_state = None
+                
                 async def run_graph():
+                    nonlocal final_state
                     try:
                         print("🔥 STARTING DIRECT GRAPH EXECUTION")
                         async for node_result in graph.astream(state):
                             print(f"🔥 NODE RESULT: {list(node_result.keys())}")
-                           
+                            # Capture the final state from the last node result
+                            final_state = node_result
                     except Exception as e:
                         print(f"--- ERROR in direct graph execution: {e}")
                         await queue.put({
@@ -367,7 +372,7 @@ async def stream_chat(session_id: str, request: ChatRequest):
                     finally:
                         print("🔥 DIRECT GRAPH EXECUTION COMPLETED")
                         await queue.put(None)  # Signal completion
-            
+                
                 async def consume_and_yield():
                     while True:
                         item = await queue.get()
@@ -385,14 +390,33 @@ async def stream_chat(session_id: str, request: ChatRequest):
                     yield f"data: {chunk_data}\n\n"
                 
                 await graph_task
+                
+                # Use the final state from graph execution instead of the original state
+                if final_state:
+                    # Extract the actual state from the last node result
+                    for node_name, node_state in final_state.items():
+                        if isinstance(node_state, dict) and 'img_urls' in node_state:
+                            state.update(node_state)
+                            break
+                
+                # Debug: Check what's actually in the state
+                print(f"🔥 FINAL STATE DEBUG:")
+                print(f"🔥 State keys: {list(state.keys())}")
+                print(f"🔥 img_urls in state: {state.get('img_urls', [])}")
+                print(f"🔥 response in state: {state.get('response', '')}")
+                
+                # Send final completion message with image URLs
                 final_chunk = {
                     "type": "content",
                     "data": {
                         "content": "",
                         "is_complete": True,
                         "full_response": full_response,
+                        "img_urls": state.get("img_urls", [])
                     }
                 }
+                
+                print(f"🔥 Final chunk img_urls: {final_chunk['data']['img_urls']}")
                 yield f"data: {json.dumps(final_chunk)}\n\n"
                 
                 if full_response:

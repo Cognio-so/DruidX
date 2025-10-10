@@ -2,25 +2,25 @@
 
 import { cn } from "@/lib/utils";
 import { memo } from "react";
-import { Streamdown } from "streamdown";
+import Markdown from "@/components/ui/markdown";
 
 type ResponseProps = {
   children: string;
   className?: string;
+  sources?: Array<{ href: string; title: string }>;
 };
 
 export const Response = memo(
-  ({ className, children, ...props }: ResponseProps) => (
-    <Streamdown
+  ({ className, children, sources, ...props }: ResponseProps) => (
+    <Markdown
+      content={children}
+      sources={sources}
       className={cn(
-        "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+        "max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className
       )}
-      parseIncompleteMarkdown={true}
       {...props}
-    >
-      {children}
-    </Streamdown>
+    />
   ),
   (prevProps, nextProps) => prevProps.children === nextProps.children
 );

@@ -48,18 +48,15 @@ export function NavUser() {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-8 w-8 rounded-lg ">
+              <Avatar className="h-8 w-8">
                 <AvatarImage
-                  src={
-                    session?.user.image ??
-                    `https://avatar.vercel.sh/${session?.user.email}`
-                  }
-                  alt={session?.user.name}
+                  src={session?.user.image || undefined}
+                  alt={session?.user.name || "User"}
                 />
-                <AvatarFallback className="rounded-lg">
+                <AvatarFallback>
                   {session?.user.name && session.user.name.length > 0
                     ? session.user.name.charAt(0).toUpperCase()
-                    : session?.user.email.charAt(0).toUpperCase()}
+                    : session?.user.email?.charAt(0).toUpperCase() || "U"}
                 </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
@@ -82,19 +79,16 @@ export function NavUser() {
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
+                <Avatar className="h-8 w-8">
                   <AvatarImage
-                    src={
-                      session?.user.image ??
-                      `https://avatar.vercel.sh/${session?.user.email}`
-                    }
-                    alt={session?.user.name}
+                    src={session?.user.image || undefined}
+                    alt={session?.user.name || "User"}
                   />
-                  <AvatarFallback className="rounded-lg">
+                  <AvatarFallback>
                     {session?.user.name && session.user.name.length > 0
                       ? session.user.name.charAt(0).toUpperCase()
-                      : session?.user.email.charAt(0).toUpperCase()}
-                  </AvatarFallback>{" "}
+                      : session?.user.email?.charAt(0).toUpperCase() || "U"}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">
@@ -114,18 +108,22 @@ export function NavUser() {
                   HomePage
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href={"/admin"}>
-                  <Library />
-                  Collections
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href={"/admin/courses"}>
-                  <Users2 />
-                  Teams
-                </Link>
-              </DropdownMenuItem>
+              {session?.user.role === "admin" && (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link href={"/admin"}>
+                      <Library />
+                      Collections
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={"/admin/teams"}>
+                      <Users2 />
+                      Teams
+                    </Link>
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuGroup>
               <ThemeToggle />
               theme toggle

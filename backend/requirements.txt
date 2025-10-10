@@ -32,4 +32,3 @@ scikit-learn==1.5.2
 langchain_google_genai
 tavily-python
 replicate
-aioqdrant>=1.7.0

@@ -4,12 +4,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sparkles, User, ExternalLink } from "lucide-react";
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import { Response } from "@/components/ai-elements/response";
-import {
-  Source,
-  Sources,
-  SourcesContent,
-  SourcesTrigger,
-} from "@/components/ai-elements/sources";
 import { useEffect, useRef } from "react";
 
 interface UploadedDoc {
@@ -118,7 +112,7 @@ export default function ChatMessage({
                     ))}
                   </div>
                 )}
-                <Response>{message}</Response>
+                <Response sources={sources}>{message}</Response>
                 {isStreaming && (
                   <span className="inline-block animate-pulse ml-1">⚪</span>
                 )}
@@ -143,8 +137,8 @@ export default function ChatMessage({
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 space-y-2">
-                <div className="max-w-[95%] bg-muted/60 border border-border rounded-lg p-8">
-                  <Response>{message}</Response>
+                <div className="bg-muted/60 border border-border rounded-lg p-4">
+                  <Response sources={sources}>{message}</Response>
                   {isStreaming && (
                     <span className="inline-block animate-pulse ml-1">⚪</span>
                   )}
@@ -153,22 +147,6 @@ export default function ChatMessage({
                   </div>
                 </div>
 
-                {sources.length > 0 && (
-                  <div className="mt-3">
-                    <Sources>
-                      <SourcesTrigger count={sources.length} />
-                      <SourcesContent>
-                        {sources.map((source, index) => (
-                          <Source
-                            href={source.href}
-                            key={index}
-                            title={source.title}
-                          />
-                        ))}
-                      </SourcesContent>
-                    </Sources>
-                  </div>
-                )}
               </div>
             </div>
           </MessageContent>

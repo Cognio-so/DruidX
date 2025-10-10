@@ -25,37 +25,45 @@ async def SimpleLLm(state: GraphState) -> GraphState:
     try:
         print(f"SimpleLLM processing query: {user_query}")
         print(f"Using model: {llm_model}")
+        print(f"Past messages count: {len(past_messages)}")
+        
         google_api_key = os.getenv("GOOGLE_API_KEY", "")
         print(f"Google API Key set: {bool(google_api_key)}")
         if not google_api_key:
             print("No Google API key found, falling back to OpenAI")
             from llm import get_llm
-            chat=get_llm(llm_model, 0.01)
+            chat=get_llm(llm_model, 0.3)  # Increased temperature for better responses
         else:
             chat= ChatGoogleGenerativeAI(
                 model="gemini-2.5-flash-lite",
                 temperature=0.3,
                 api_key=google_api_key,
             )
+        
+        # Only use summary + very recent messages
         formatted_history = []
         if summary:
             formatted_history.append(SystemMessage(content=f"Conversation summary so far:\n{summary}"))
 
-        for m in past_messages[-3:]:  # keep last 3 turns for context
+        # Only last 2 messages (much smaller)
+        for m in past_messages[-2:]:
             role = (m.get("type") or m.get("role") or "").lower()
             content = m.get("content") if isinstance(m, dict) else getattr(m, "content", "")
             if content:
+                # Truncate if too long
+                if len(content) > 300:
+                    content = content[:300] + "..."
+                
                 if role in ("human", "user"):
                     formatted_history.append(HumanMessage(content=content))
-                else:  # assistant messages
-                    formatted_history.append(SystemMessage(content=f"Previous assistant response: {content}"))
-                    # OR use AIMessage if available:
-                    # from langchain_core.messages import AIMessage
-                    # formatted_history.append(AIMessage(content=content))
+                else:
+                    formatted_history.append(AIMessage(content=content))
 
+        # Create the final message list
         messages = [SystemMessage(content=prompt)] + formatted_history + [HumanMessage(content=user_query)]
 
         print(f"Sending messages to LLM: {len(messages)} messages")
+        print(f"Current query: {user_query}")
         
         # Stream the response and collect it
         full_response = ""
@@ -74,8 +82,6 @@ async def SimpleLLm(state: GraphState) -> GraphState:
             full_response += "\n\n"
         
         print(f"SimpleLLM response received: {full_response[:100]}...")
-        # Remove this line since main.py handles message persistence
-        # state.setdefault("messages", []).append({"role": "assistant", "content": full_response})
         state["response"] = full_response
         print(f"State updated with response: {bool(state.get('response'))}")
         return state

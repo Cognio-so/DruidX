@@ -289,102 +289,52 @@ async def intelligent_source_selection(
         }
     """
     
-    classification_prompt = f"""You are a query routing expert. Analyze the user's query and decide which knowledge sources to use.
+    classification_prompt = f"""
+You are a precise and logical routing agent for an AI system. Your only job is to analyze the user's query and the system's state to decide which knowledge source to use for the answer.
 
-Available Sources:
-- User Documents: {'Available' if has_user_docs else 'Not available'}
-- Knowledge Base (KB): {'Available' if has_kb else 'Not available'}
+---
+## System State & Context
 
-Custom GPT Purpose/Instructions:
-{custom_prompt if custom_prompt else 'No specific purpose defined'}
+* **User Query:** "{user_query}"
+* **User Document Status:** A new document was just uploaded for this query: **{has_user_docs}**
+* **Knowledge Base (KB) Status:** {"Available" if has_kb else "Not Available"}
+* **Custom GPT Instructions:** "{custom_prompt or 'General assistant'}"
 
-User Query: "{user_query}"
+---
+## Decision Logic (Follow in this exact order)
 
-**ABSOLUTE PRIORITY RULE: USER QUERY INTENT > CUSTOM GPT PURPOSE**
+**1. PRIORITY #1: The "Just Uploaded" Rule**
+* **IF** a new document was just uploaded (`true`) AND the query is generic (like "summarize this", "explain", "what are the key points?"),
+* **THEN** your decision **MUST BE** `"user_docs_only"`. This rule overrides all others to ensure immediate relevance.
 
-The user's explicit query intent ALWAYS determines source selection.
+**2. PRIORITY #2: The "Comparison & Evaluation" Rule**
+* **IF** the query asks for a **comparison, review, or validation** (e.g., "compare this to", "review this against", "does this meet standards?") AND the **Custom GPT Instructions** imply a standard of comparison (e.g., "You are a resume reviewer," "You are a code auditor"),
+* **THEN** your decision **MUST BE** `"both"` (if the KB is available).
 
-**Understanding Knowledge Base (KB) Role:**
-KB provides domain-specific knowledge (standards, concepts, terminology, best practices).
-**CRITICAL**: Only use KB if it's RELEVANT to the user's document and query.
+**3. PRIORITY #3: The "Contextual Explanation" Rule**
+* **IF** the query asks for an **explanation** that requires external domain knowledge AND the **Custom GPT Instructions** indicate the KB contains that knowledge (e.g., "You are a legal contract assistant" and the query is "explain this clause"),
+* **THEN** your decision is `"both"` (if the KB is available).
 
-**How to use Custom GPT Purpose:**
-- Use it to understand what DOMAIN the KB covers (e.g., "resume evaluation", "code review", "medical analysis")
-- Check if user's document and query are related to this domain
-- If user doc is in same domain as KB → KB might be relevant
-- If user doc is unrelated to KB domain → KB is NOT relevant
+**4. PRIORITY #4: The Default Rule**
+* **For all other specific queries** that are not simple greetings, your default decision is `"user_docs_only"` (if user documents are available).
 
-**Decision Rules:**
+**5. PRIORITY #5: The "No Docs / General Query" Rule**
+* **IF** no user documents are available OR the query is a general question about a topic, use `"kb_only"` if the query is relevant to the KB. Otherwise, select `"none"`.
 
-1. **User Documents Only** - Use when:
-   - **Simple extraction**: "Summarize", "List points", "Extract information"
-   - **Explanation of self-contained content**: "Explain this" when document is self-explanatory
-   - User wants information FROM the document without needing external knowledge
-   - Default choice unless KB is clearly needed
+---
+## Output Format
 
-2. **Both Sources (User Docs + KB)** - Use ONLY when KB is RELEVANT:
-   
-   **For Interpretation/Explanation queries** ("Explain", "What does this mean", "Help understand"):
-   - First check: Is KB topic-related to user's document?
-   - If YES and query needs domain knowledge → use both
-   - If NO or document is self-explanatory → use user doc only
-   - Examples where KB helps:
-     * User doc is code + KB has programming knowledge → both
-     * User doc is resume + KB has job requirements → both
-     * User doc is contract + KB has legal terms → both
-   - Examples where KB NOT needed:
-     * User doc is a story + KB has technical specs → user only
-     * Document already explains itself clearly → user only
-   
-   **For Evaluation queries** ("Check", "Review", "Validate", "Does this meet"):
-   - Use both if KB has relevant standards/requirements
-   - Otherwise user doc only
-   
-   **For Contextual Q&A** ("Answer based on this", "Using this document"):
-   - Use both only if KB enhances understanding of document's domain
-   - Otherwise user doc only
+You **MUST** respond with a single, valid JSON object and nothing else.
 
-3. **Knowledge Base Only** - Use when:
-   - Query about general knowledge without user document
-   - "What are best practices", "Tell me about X"
-
-4. **None** - Use when:
-   - Greetings, casual conversation
-
-Respond in JSON format:
+```json
 {{
     "use_user_docs": true/false,
     "use_kb": true/false,
-    "search_strategy": "user_only" | "kb_only" | "both" | "none",
-    "reasoning": "Brief explanation focusing on query intent"
+    "search_strategy": "user_docs_only" | "kb_only" | "both" | "none",
+    "reasoning": "A brief explanation of which rule you followed and why."
 }}
-
-**Examples with Custom GPT Context:**
-
-Scenario 1: GPT = "Resume Evaluator" (KB has job requirements)
-- "give summary" → **user_only** (extraction only)
-- "explain this resume" → **both** (KB relevant - has job context to interpret resume)
-- "explain this story" → **user_only** (KB NOT relevant - story ≠ resume domain)
-- "check this resume" → **both** (evaluation + KB relevant)
-
-Scenario 2: GPT = "Code Reviewer" (KB has programming best practices)
-- "summarize this code" → **user_only** (extraction)
-- "explain this function" → **both** (KB relevant - has programming knowledge)
-- "explain this essay" → **user_only** (KB NOT relevant - essay ≠ code domain)
-- "review this code" → **both** (evaluation + KB relevant)
-
-Scenario 3: GPT = "General Assistant" (KB has random knowledge)
-- "explain this" → **user_only** (KB domain unclear, default to user doc)
-- "check against standards" → **both** (explicit evaluation request)
-
-**Key principle**: 
-1. Check query intent (summary vs explanation vs evaluation)
-2. Use Custom GPT Purpose to understand KB domain
-3. Check if user doc is in same domain as KB
-4. Default to user_only unless KB is clearly relevant
 """
-
-    llm=get_llm(llm_model, 0.1)
+    llm=get_llm(llm_model, 0.4)
     response = await llm.ainvoke([HumanMessage(content=classification_prompt)])
     
     try:
@@ -566,7 +516,7 @@ async def Rag(state: GraphState) -> GraphState:
     ]
     
     await send_status_update(state, "🤖 Generating response from retrieved information...", 90)
-    llm=get_llm(llm_model,0.8)
+    llm=get_llm(llm_model,0.3)
     print(f"model named used in rag.....", llm_model)
     chunk_callback = state.get("_chunk_callback")
     full_response = ""

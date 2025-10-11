@@ -85,13 +85,19 @@ export function useChatSession(): ChatSessionHook {
   const loadGPTKnowledgeBase = useCallback(
     async (gptId: string, sessionId: string) => {
       try {
+        console.log("=== FRONTEND: Loading GPT Knowledge Base ===");
+        console.log("GPT ID:", gptId);
+        console.log("Session ID:", sessionId);
+        
         const gptResponse = await fetch(`/api/gpts/${gptId}`);
         if (!gptResponse.ok) {
           const errorText = await gptResponse.text();
+          console.error("Failed to fetch GPT:", errorText);
           return;
         }
 
         const gpt = await gptResponse.json();
+        console.log("GPT Data from API:", gpt);
 
         setHybridRag(gpt.hybridRag || false);
 
@@ -112,6 +118,13 @@ export function useChatSession(): ChatSessionHook {
         
 
         try {
+        console.log("=== FRONTEND: Setting GPT Config ===");
+        console.log("Session ID:", sessionId);
+        console.log("GPT Config Data:", gptConfigData);
+        console.log("Instruction:", gptConfigData.instruction);
+        console.log("NEXT_PUBLIC_BACKEND_URL:", process.env.NEXT_PUBLIC_BACKEND_URL);
+        console.log("Backend URL:", `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/sessions/${sessionId}/gpt-config`);
+          
           const configResponse = await fetch(
             `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/sessions/${sessionId}/gpt-config`,
             {
@@ -125,9 +138,12 @@ export function useChatSession(): ChatSessionHook {
 
           if (!configResponse.ok) {
             const errorText = await configResponse.text();
+            console.error("GPT Config Error:", errorText);
+          } else {
+            console.log("GPT Config set successfully");
           }
         } catch (backendError) {
-          // Handle error silently
+          console.error("GPT Config Exception:", backendError);
         }
 
         if (gpt.knowledgeBase) {

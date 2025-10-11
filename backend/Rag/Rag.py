@@ -481,7 +481,9 @@ async def Rag(state: GraphState) -> GraphState:
         context_parts.append(f"\nKNOWLEDGE BASE CONTEXT:\n{chr(10).join(kb_result)}")
     
     if not user_result and not kb_result:
-        context_parts.append("\nNO RETRIEVAL CONTEXT: Answer using general knowledge and conversation history.")
+        context_parts.append("\nNO RETRIEVAL CONTEXT: No relevant documents were found. Provide a helpful response based on general knowledge and conversation history.")
+    elif not user_result and kb_result:
+        context_parts.append("\nPARTIAL CONTEXT: Only knowledge base information is available. The user may need to upload documents for analysis.")
 
     final_context_message = HumanMessage(content="\n".join(context_parts))
 
@@ -501,6 +503,7 @@ async def Rag(state: GraphState) -> GraphState:
 - If only Knowledge Base Context is provided: Focus exclusively on standards/guidelines
 - If both are provided: Integrate both sources appropriately
 - If no retrieval context: Use general knowledge and conversation history
+- If only KB is available but user documents are expected: Politely explain that documents need to be uploaded for analysis
 
 **Output Formatting:**
 - For summaries: Use clear paragraphs with key points highlighted

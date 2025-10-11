@@ -180,28 +180,41 @@ async def add_documents_by_url(session_id: str, request: dict):
                 if file_type == "application/pdf" or filename.lower().endswith('.pdf'):
                     print(f"[Document Processor] Processing PDF: {filename}")
                     content = extract_text_from_pdf(file_content)
+                    if not content.strip():
+                        print(f"⚠️ Warning: PDF {filename} appears to be empty or unreadable")
                 elif file_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document" or filename.lower().endswith('.docx'):
                     print(f"[Document Processor] Processing DOCX: {filename}")
                     content = extract_text_from_docx(file_content)
+                    if not content.strip():
+                        print(f"⚠️ Warning: DOCX {filename} appears to be empty or unreadable")
                 elif file_type == "application/json" or filename.lower().endswith('.json'):
                     print(f"[Document Processor] Processing JSON: {filename}")
                     content = extract_text_from_json(file_content)
+                    if not content.strip():
+                        print(f"⚠️ Warning: JSON {filename} appears to be empty or unreadable")
                 else:
                     print(f"[Document Processor] Processing as text: {filename}")
                     content = extract_text_from_txt(file_content)
+                    if not content.strip():
+                        print(f"⚠️ Warning: Text file {filename} appears to be empty or unreadable")
                 
-                processed_doc = {
-                    "id": doc["id"],
-                    "filename": doc["filename"],
-                    "content": content,
-                    "file_type": doc["file_type"],
-                    "file_url": doc["file_url"],
-                    "size": doc["size"]
-                }
-                processed_docs.append(processed_doc)
-                print(f"✅ Successfully processed document: {doc['filename']}")
+                if content.strip():  # Only add documents with actual content
+                    processed_doc = {
+                        "id": doc["id"],
+                        "filename": doc["filename"],
+                        "content": content,
+                        "file_type": doc["file_type"],
+                        "file_url": doc["file_url"],
+                        "size": doc["size"]
+                    }
+                    processed_docs.append(processed_doc)
+                    print(f"✅ Successfully processed document: {doc['filename']} ({len(content)} chars)")
+                else:
+                    print(f"❌ Skipping document {doc['filename']}: No readable content extracted")
         except Exception as e:
             print(f"❌ Error fetching {doc['filename']}: {e}")
+            import traceback
+            traceback.print_exc()
     
     print(f"Total processed documents: {len(processed_docs)}")
     

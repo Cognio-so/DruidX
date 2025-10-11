@@ -6,6 +6,7 @@ import ChatMessage from "./_components/ChatMessage";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatSession } from "@/hooks/use-chat-session";
 import { useChatMessages } from "@/hooks/use-chat-messages";
+import { useAutoSaveConversation } from "@/hooks/use-auto-save-conversation";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getModelByFrontendValue } from "@/lib/modelMapping";
@@ -26,6 +27,14 @@ export default function ChatGptById() {
   const [gptData, setGptData] = useState<GptData | null>(null);
 
   const hasMessages = messages.length > 0;
+
+  // Auto-save conversations to database
+  useAutoSaveConversation({
+    gptId,
+    gptName: gptData?.name || 'Unknown GPT',
+    sessionId,
+    messages
+  });
 
   useEffect(() => {
     const fetchGptData = async () => {

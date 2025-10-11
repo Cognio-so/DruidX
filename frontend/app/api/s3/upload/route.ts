@@ -8,10 +8,10 @@ const BUCKET = process.env.R2_BUCKET_NAME!;
 const PUBLIC_URL = process.env.R2_PUBLIC_URL!;
 
 export async function POST(req: NextRequest) {
-  const session = await requireUser();
+  const { user } = await requireUser();
 
   try {
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

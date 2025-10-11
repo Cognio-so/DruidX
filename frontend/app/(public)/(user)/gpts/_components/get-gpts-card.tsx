@@ -1,9 +1,11 @@
-import { getMyAssignedGpts } from "@/data/get-user-assigned-gpts";
+import { getUserAssignedGpts } from "@/data/get-user-assigned-gpts";
 import { UserAssignedGptCard } from "./user-assigned-gpt-card";
+import { requireUser } from "@/data/requireUser";
 
 export default async function GetGptsCard() {
-  // Fetch user's assigned GPTs
-  const assignedGpts = await getMyAssignedGpts();
+  const { user } = await requireUser();
+  
+  const assignedGpts = await getUserAssignedGpts(user.id);
 
   if (assignedGpts.length === 0) {
     return (

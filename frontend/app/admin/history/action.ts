@@ -18,7 +18,7 @@ export interface ConversationData {
 
 export async function saveConversation(conversationData: ConversationData) {
   try {
-    const session = await requireUser();
+    const { user } = await requireUser();
     
     // Check if conversation exists for this session
     const existing = await prisma.conversation.findFirst({
@@ -58,7 +58,7 @@ export async function saveConversation(conversationData: ConversationData) {
         data: {
           title: conversationData.title,
           gptId: conversationData.gptId,
-          userId: session.user.id,
+          userId: user.id,
           sessionId: conversationData.sessionId,
           messages: {
             create: conversationData.messages.map(msg => ({

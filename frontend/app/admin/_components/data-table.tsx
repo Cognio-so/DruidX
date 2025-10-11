@@ -201,7 +201,7 @@ export function DataTable<TData, TValue>({
 }
 
 // Utility components for common table columns
-export function SortableHeader({ children, column }: { children: React.ReactNode; column: any }) {
+export function SortableHeader({ children, column }: { children: React.ReactNode; column: { toggleSorting: (asc: boolean) => void; getIsSorted: () => false | "asc" | "desc" } }) {
   return (
     <Button
       variant="ghost"

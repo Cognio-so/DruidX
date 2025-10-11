@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SectionCards } from "./section-cards";
 import { ChartAreaInteractive } from "./chart-area-interactive";
@@ -115,16 +115,7 @@ async function GptUsageChart() {
 async function RecentActivityData() {
   const data = await getRecentActivity();
 
-  const fixedRecentGpts = data.recentGpts.map((gpt: any) => ({
-    id: gpt.id,
-    name: gpt.name,
-    image: gpt.image ?? null,
-    createdAt: gpt.createdAt,
-    user: { name: gpt.user?.name ?? null },
-    _count: { conversations: gpt._count?.conversations ?? 0 }
-  }));
-
-  return <RecentActivityTable data={{ ...data, recentGpts: fixedRecentGpts }} />;
+  return <RecentActivityTable data={data} />;
 }
 
 // Main dashboard component

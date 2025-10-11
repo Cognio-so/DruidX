@@ -27,7 +27,7 @@ export default async function GetGptsCard() {
         </div>
         <h3 className="text-lg font-semibold text-primary mb-2">No GPTs Assigned</h3>
         <p className="text-primary max-w-sm">
-          You don't have any GPTs assigned to you yet. Contact your administrator to get access to GPTs.
+          You don&apos;t have any GPTs assigned to you yet. Contact your administrator to get access to GPTs.
         </p>
       </div>
     );

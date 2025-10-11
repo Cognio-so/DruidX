@@ -6,9 +6,9 @@ import { requireUser } from "@/data/requireUser";
 const BUCKET = process.env.R2_BUCKET_NAME!;
 
 export async function DELETE(req: NextRequest) {
-  const session = await requireUser();
+  const { user } = await requireUser();
   try {
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

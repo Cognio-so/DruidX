@@ -1,10 +1,10 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { DataTable, UserAvatar, RelativeTime, ActionsDropdown } from "./data-table";
+import { DataTable, UserAvatar, RelativeTime } from "./data-table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageSquare, Bot, User } from "lucide-react";
+import { Bot, User } from "lucide-react";
 
 interface RecentActivity {
   recentConversations: Array<{
@@ -43,8 +43,12 @@ interface RecentActivity {
   }>;
 }
 
-export function RecentActivityTable({ data }: { data: RecentActivity }) {
-  const conversationColumns: ColumnDef<RecentActivity['recentConversations'][0]>[] = [
+export function RecentActivityTable({ data }: { data: {
+  recentConversations: any[];
+  recentUsers: any[];
+  recentGpts: any[];
+} }) {
+  const conversationColumns: ColumnDef<any>[] = [
     {
       accessorKey: "user",
       header: "User",
@@ -90,7 +94,7 @@ export function RecentActivityTable({ data }: { data: RecentActivity }) {
     },
   ];
 
-  const userColumns: ColumnDef<RecentActivity['recentUsers'][0]>[] = [
+  const userColumns: ColumnDef<any>[] = [
     {
       accessorKey: "name",
       header: "User",
@@ -116,7 +120,7 @@ export function RecentActivityTable({ data }: { data: RecentActivity }) {
     },
   ];
 
-  const gptColumns: ColumnDef<RecentActivity['recentGpts'][0]>[] = [
+  const gptColumns: ColumnDef<any>[] = [
     {
       accessorKey: "name",
       header: "GPT",

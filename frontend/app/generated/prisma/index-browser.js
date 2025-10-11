@@ -211,6 +211,24 @@ exports.Prisma.AssignGptScalarFieldEnum = {
   assignedBy: 'assignedBy'
 };
 
+exports.Prisma.ConversationScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  userId: 'userId',
+  gptId: 'gptId',
+  sessionId: 'sessionId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.MessageScalarFieldEnum = {
+  id: 'id',
+  conversationId: 'conversationId',
+  role: 'role',
+  content: 'content',
+  timestamp: 'timestamp'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -255,6 +273,12 @@ exports.ModelEnum = exports.$Enums.ModelEnum = {
   kimi_k2_0905: 'kimi_k2_0905'
 };
 
+exports.MessageRole = exports.$Enums.MessageRole = {
+  user: 'user',
+  assistant: 'assistant',
+  system: 'system'
+};
+
 exports.Prisma.ModelName = {
   User: 'User',
   Session: 'Session',
@@ -262,7 +286,9 @@ exports.Prisma.ModelName = {
   Verification: 'Verification',
   Gpt: 'Gpt',
   Invitation: 'Invitation',
-  AssignGpt: 'AssignGpt'
+  AssignGpt: 'AssignGpt',
+  Conversation: 'Conversation',
+  Message: 'Message'
 };
 
 /**

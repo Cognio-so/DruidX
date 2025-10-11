@@ -24,6 +24,7 @@ model User {
   accounts      Account[]
   Gpt           Gpt[]
   assignedGpts  AssignGpt[]
+  conversations Conversation[]
 
   @@unique([email])
   @@map("user")
@@ -92,6 +93,7 @@ model Gpt {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   assignedToUsers AssignGpt[]
+  conversations Conversation[]
 }
 
 model Invitation {
@@ -124,6 +126,32 @@ model AssignGpt {
   @@map("assign_gpt")
 }
 
+model Conversation {
+  id        String   @id @default(cuid())
+  title     String
+  userId    String
+  gptId     String
+  sessionId String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gpt       Gpt      @relation(fields: [gptId], references: [id], onDelete: Cascade)
+  messages  Message[]
+  
+  @@map("conversation")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  role           MessageRole
+  content        String
+  timestamp      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  @@map("message")
+}
+
 enum ModelEnum {
   gemini_2_5_flash
   gemini_2_5_pro
@@ -141,4 +169,10 @@ enum ModelEnum {
   deepseek_v3_1
   meta_llama_3_3_70b
   kimi_k2_0905
+}
+
+enum MessageRole {
+  user
+  assistant
+  system
 }

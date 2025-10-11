@@ -24,23 +24,23 @@ import {
 const navItems = [
   {
     title: "Dashboard",
-    url: "/user",
+    url: "/dashboard",
     icon: LayoutDashboard,
   },
   {
     title: "Collections",
-    url: "/user/gpts",
+    url: "/gpts",
     icon: FolderOpen,
   },
  
   {
     title: "History",
-    url: "/user/history",
+    url: "/history",
     icon: History,
   },
   {
     title: "Settings",
-    url: "/user/settings",
+    url: "/settings",
     icon: Settings,
   },
 ];
@@ -52,7 +52,7 @@ export function UserSidebar(props: React.ComponentProps<typeof Sidebar>) {
   // Add isActive property based on current pathname
   const navMain = navItems.map((item) => ({
     ...item,
-    isActive: pathname === item.url || (item.url !== "/user" && pathname.startsWith(item.url)),
+    isActive: pathname === item.url || (item.url !== "/dashboard" && pathname.startsWith(item.url)),
   }));
 
   return (

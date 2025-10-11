@@ -9,21 +9,22 @@ datasource db {
 }
 
 model User {
-  id            String      @id @default(cuid())
+  id            String         @id @default(cuid())
   name          String
   email         String
-  role          String      @default("user")
-  banned        Boolean     @default(false) // Admin plugin field
+  role          String         @default("user")
+  banned        Boolean        @default(false) // Admin plugin field
   banReason     String? // Admin plugin field
   banExpires    DateTime? // Admin plugin field
-  emailVerified Boolean     @default(false)
+  emailVerified Boolean        @default(false)
   image         String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @default(now()) @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now()) @updatedAt
   sessions      Session[]
   accounts      Account[]
   Gpt           Gpt[]
   assignedGpts  AssignGpt[]
+  conversations Conversation[]
 
   @@unique([email])
   @@map("user")
@@ -76,22 +77,23 @@ model Verification {
 }
 
 model Gpt {
-  id              String      @id @default(cuid())
+  id              String         @id @default(cuid())
   userId          String
-  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name            String      @db.VarChar(100)
-  description     String      @db.VarChar(500)
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String         @db.VarChar(100)
+  description     String         @db.VarChar(500)
   model           ModelEnum
-  instruction     String      @db.Text
-  webBrowser      Boolean     @default(false)
-  hybridRag       Boolean     @default(false)
-  mcp             Boolean     @default(false)
+  instruction     String         @db.Text
+  webBrowser      Boolean        @default(false)
+  hybridRag       Boolean        @default(false)
+  mcp             Boolean        @default(false)
   mcpSchema       Json?
   image           String
   knowledgeBase   String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
   assignedToUsers AssignGpt[]
+  conversations   Conversation[]
 }
 
 model Invitation {
@@ -124,6 +126,32 @@ model AssignGpt {
   @@map("assign_gpt")
 }
 
+model Conversation {
+  id        String    @id @default(cuid())
+  title     String
+  userId    String
+  gptId     String
+  sessionId String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gpt       Gpt       @relation(fields: [gptId], references: [id], onDelete: Cascade)
+  messages  Message[]
+
+  @@map("conversation")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  role           MessageRole
+  content        String
+  timestamp      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("message")
+}
+
 enum ModelEnum {
   gemini_2_5_flash
   gemini_2_5_pro
@@ -141,4 +169,10 @@ enum ModelEnum {
   deepseek_v3_1
   meta_llama_3_3_70b
   kimi_k2_0905
+}
+
+enum MessageRole {
+  user
+  assistant
+  system
 }

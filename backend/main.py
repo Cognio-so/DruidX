@@ -254,6 +254,7 @@ async def stream_chat(session_id: str, request: ChatRequest):
     print(f"Uploaded doc: {request.uploaded_doc}")
     
     session = SessionManager.get_session(session_id)
+    print(f"Previous last_route in session: {session.get('last_route')}")  # <--- ADD THIS LINE
     
     # Add user message to session
     session["messages"].append({"role": "user", "content": request.message})
@@ -346,6 +347,7 @@ async def stream_chat(session_id: str, request: ChatRequest):
             rag=request.rag, 
             deep_search=request.deep_search,  
             uploaded_doc=request.uploaded_doc,
+            last_route=session.get("last_route"),  # <--- ADD THIS LINE
             _chunk_callback=chunk_callback  # Add this line
         )
         
@@ -360,6 +362,7 @@ async def stream_chat(session_id: str, request: ChatRequest):
         print(f"Web search: {state.get('web_search', False)}")
         print(f"RAG: {state.get('rag', False)}")
         print(f"Deep search: {state.get('deep_search', False)}")
+        print(f"Last route: {state.get('last_route')}")  # <--- ADD THIS LINE
         
         async def generate_stream():
             try:
@@ -434,6 +437,11 @@ async def stream_chat(session_id: str, request: ChatRequest):
                 
                 if full_response:
                     session["messages"].append({"role": "assistant", "content": full_response})
+                    SessionManager.update_session(session_id, session)
+                
+                # Always update last_route, even if response is empty
+                if state.get("route"):
+                    session["last_route"] = state["route"]
                     SessionManager.update_session(session_id, session)
                 
                 yield f"data: {json.dumps({'type': 'done', 'data': {'session_id': session_id}})}\n\n"

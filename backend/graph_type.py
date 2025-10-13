@@ -18,6 +18,7 @@ class GraphState(TypedDict, total=False):
     uploaded_doc: Optional[bool]  # uploaded document indicator
     messages: List[Dict[str, Any]]
     route: Optional[str]
+    last_route: Optional[str]
     response: Optional[str]
     context: Dict[str, Any]
     session_id: Optional[str]        

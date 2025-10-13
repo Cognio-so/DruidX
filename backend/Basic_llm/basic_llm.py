@@ -51,8 +51,9 @@ async def SimpleLLm(state: GraphState) -> GraphState:
             content = m.get("content") if isinstance(m, dict) else getattr(m, "content", "")
             if content:
                 # Truncate if too long
-                if len(content) > 300:
-                    content = content[:300] + "..."
+                if len(content.split()) > 300:
+                   content = " ".join(content.split()[:300]) + "..."
+
                 
                 if role in ("human", "user"):
                     formatted_history.append(HumanMessage(content=content))

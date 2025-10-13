@@ -32,4 +32,5 @@ class GraphState(TypedDict, total=False):
     resolved_queries: Optional[List[Dict[str, Any]]]
     _chunk_callback: Optional[Callable] 
     deep_research_state: Optional[Dict[str, Any]]  
-    deep_research_query: Optional[str]              
+    deep_research_query: Optional[str]
+    img_urls: Optional[List[str]]  # Add this line for image URLs

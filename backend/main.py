@@ -437,6 +437,11 @@ async def stream_chat(session_id: str, request: ChatRequest):
                 
                 if full_response:
                     session["messages"].append({"role": "assistant", "content": full_response})
+                    
+                    # Store image URLs in session for persistence
+                    if state.get("img_urls"):
+                        session["img_urls"] = state.get("img_urls", [])
+                    
                     SessionManager.update_session(session_id, session)
                 
                 # Always update last_route, even if response is empty

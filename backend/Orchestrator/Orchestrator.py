@@ -33,52 +33,64 @@ def _format_last_turns(messages, k=3):
         tail.append(f"{speaker}: {content}")
     return "\n".join(tail)
 
-async def summarizer(state, keep_last=3) -> None:
+async def summarizer(state, keep_last=2):
     """
-    Compress the older part of the conversation to reduce tokens.
-    Keep the latest `keep_last` turns verbatim; summarize the rest into context.session.summary.
+    Summarizes older parts of the conversation and keeps only
+    the last `keep_last` user–assistant turns (each max 300 words).
     """
-    google_api_key = os.getenv("GOOGLE_API_KEY", "")
     msgs = state.get("messages") or []
     if len(msgs) <= keep_last:
         return
-    older = msgs[:-keep_last]
-    tail = msgs[-keep_last:]
 
-    older_lines = []
+    older = msgs[:-keep_last]
+    recent = msgs[-keep_last:]
+
+
+    def truncate_text(text: str, word_limit: int = 300):
+        words = text.split()
+        return " ".join(words[:word_limit]) + ("..." if len(words) > word_limit else "")
+
+    for m in recent:
+        if "content" in m and isinstance(m["content"], str):
+            m["content"] = truncate_text(m["content"])
+
+    
+    old_text = []
     for m in older:
         role = (m.get("type") or m.get("role") or "").lower()
-        content = m.get("content") if isinstance(m, dict) else getattr(m, "content", "")
+        content = m.get("content") or ""
         if not content:
             continue
         speaker = "User" if role in ("human", "user") else "Assistant"
-        older_lines.append(f"{speaker}: {content}")
-    older_text = "\n".join(older_lines)[:8000]  
-    sys = (
-        "You are a concise conversation summarizer. Produce a compact summary of the prior dialogue. "
-        "Preserve key entities, intents, constraints, user preferences, and any lists (e.g., recommended books) "
-        "so follow-up questions can be answered consistently. Output plain text, no markdown."
+        old_text.append(f"{speaker}: {content}")
+    full_old_text = "\n".join(old_text)[:8000]  
+    
+    system_prompt = (
+        "You are a summarization agent. Summarize the following chat history into <300 words, "
+        "preserving key intents, facts, and unresolved items. Output only plain text."
     )
-    usr = f"Summarize the following conversation:\n\n{older_text}\n\nReturn only the summary."
-    try:
-        google_api_key = os.getenv("GOOGLE_API_KEY", "")
-        llm= ChatGoogleGenerativeAI(
-                model="gemini-2.5-flash-lite",
-                temperature=0.3,
-                api_key=google_api_key,
-            )
-        result = await llm.ainvoke([SystemMessage(content=sys), HumanMessage(content=usr)])
-        summary = (result.content or "").strip()
-    except Exception:
-        summary = "Conversation so far: user asked questions; assistant answered with recommendations and details."
+    user_prompt = f"Summarize this conversation:\n\n{full_old_text}"
 
-    # Store in context
+    try:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        google_api_key = os.getenv("GOOGLE_API_KEY", "")
+        llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", temperature=0.3, api_key=google_api_key)
+        result = await llm.ainvoke([
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_prompt)
+        ])
+        summary = (result.content or "").strip()
+    except Exception as e:
+        summary = "Summary of earlier conversation: user and assistant discussed multiple related topics."
+
+    
     ctx = state.get("context") or {}
     sess = ctx.get("session") or {}
     sess["summary"] = summary
     ctx["session"] = sess
     state["context"] = ctx
-    state["messages"] = tail
+    state["messages"] = recent
+
 
 async def is_folloup(user_query: str,
     history: List[dict],
@@ -135,91 +147,167 @@ async def is_folloup(user_query: str,
             "rationale": "Fallback heuristic because LLM did not return valid JSON."
         }
     return obj
-async def analyze_query(user_query: str, prompt_template: str, llm: str) -> Optional[Dict[str, Any]]:
+
+
+async def analyze_query(
+    user_message: str,
+    prompt_template: str,
+    llm: str,
+    *,
+    recent_messages_text: str,
+    session_summary: str,
+    last_route: str | None,
+    active_docs_present: bool,
+) -> Optional[Dict[str, Any]]:
+    """
+    Analyze the user's message in context (conversation, summary, last route)
+    to decide the next node (RAG, WebSearch, SimpleLLM, Image).
+
+    Rules enforced:
+    - Only `active_docs_present` determines RAG possibility.
+    - WebSearch and Image detection are purely query-driven.
+    - No toggles, KB, or doc presence influence routing.
+    """
+
     try:
-       
-        prompt = prompt_template.replace("{user_query}", user_query)
-        print(f"llm----", llm)
-        # chat=get_llm(llm, 0.3)
-        
-        messages = [
-            SystemMessage(content=prompt),
-            HumanMessage(content=user_query)
-        ]
+        prompt = (
+            prompt_template
+            .replace("{user_message}", user_message)
+            .replace("{recent_messages}", recent_messages_text or "(none)")
+            .replace("{session_summary}", session_summary or "(none)")
+            .replace("{last_route}", str(last_route or "None"))
+            .replace("{active_docs_present}", str(bool(active_docs_present)).lower())
+        )
+        print(f"recent_messages_text..............", recent_messages_text)
+        print(f"session_summary..............", session_summary)
+        print(f"[Analyzer] Model: {llm}")
+        messages = [SystemMessage(content=prompt), HumanMessage(content=user_message)]
+
         google_api_key = os.getenv("GOOGLE_API_KEY", "")
-        chat= ChatGoogleGenerativeAI(
-                model="gemini-2.5-flash-lite",
-                temperature=0.3,
-                api_key=google_api_key,
-            )
+        chat = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash-lite",
+            temperature=0.3,
+            api_key=google_api_key,
+        )
+
         response = await chat.ainvoke(messages)
-        content = response.content
-        
-        print(f"LLM Response: {content}")
-        
+        content = (response.content or "").strip()
+        print(f"[Analyzer Raw Output] {content}")
+
         import re, json
-        json_match = re.search(r'\{[\s\S]*\}', content)
+        json_match = re.search(r"\{[\s\S]*\}", content)
         if json_match:
-            json_str = json_match.group(0)
-            json_str = json_str.replace("{{", "{").replace("}}", "}")
-            print(f"Extracted JSON: {json_str}")
+            json_str = json_match.group(0).replace("{{", "{").replace("}}", "}")
+            print(f"[Analyzer Extracted JSON] {json_str}")
             return json.loads(json_str)
         return json.loads(content)
+
     except Exception as e:
-        print(f"Error in analyze_query: {e}")
+        print(f"[Analyzer Error] {e}")
         import traceback
         traceback.print_exc()
         return None
+
 
 def _get_last_output(state: GraphState) -> dict | None:
     """Helper to safely get the last intermediate result."""
     return state.get("intermediate_results", [])[-1] if state.get("intermediate_results") else None
 
-# In Orchestrator.py
 
 async def rewrite_query(state: GraphState) -> str:
     """
-    Dynamically rewrites the query for the *next* task, using only the
-    output from the *most recent* task to be faster.
+    Rewrites the query dynamically.
+    - If it's the first node (new user query): uses summary + recent conversation.
+    - If it's a multi-node continuation: uses previous node's output.
+    - Ensures rewritten query ≤ 150 words.
+    Includes detailed debug prints.
     """
     user_query = state.get("user_query", "")
     current_task = state.get("current_task", "")
     plan = state.get("tasks", [])
-    
-    # OPTIMIZATION: Only use the most recent result, not the whole history.
-    last_result = _get_last_output(state) 
-    context_from_last_step = f"Context from previous step ({last_result['node']}):\n{last_result['output']}" if last_result else "This is the first step."
+    idx = state.get("task_index", 0)
+    intermediate_results = state.get("intermediate_results", [])
 
-    prompt = f"""You are a query rewriter for an AI agent. Create a precise, standalone query for the next step in a plan.
+    print("\n========== [REWRITE QUERY DEBUG] ==========")
+    print(f"🧩 Current Task: {current_task}")
+    print(f"🧠 User Query: {user_query}")
+    print(f"📋 Full Plan: {plan}")
+    print(f"🔢 Task Index: {idx}")
+    print(f"📚 Intermediate Results Count: {len(intermediate_results)}")
 
-Original User Goal: "{user_query}"
-Full Plan: {plan}
-Next Step to Execute: '{current_task}'
+   
+    is_first_node = (idx == 0 or not intermediate_results)
+    print(f"🌟 Is First Node in Plan? {is_first_node}")
+    if is_first_node:
+        summary = state.get("context", {}).get("session", {}).get("summary", "")
+        messages = state.get("messages", [])
+        last_msgs = []
+        for m in messages[-2:]:
+            role = (m.get("type") or m.get("role") or "").lower()
+            content = m.get("content") or ""
+            speaker = "User" if role in ("human", "user") else "Assistant"
+            last_msgs.append(f"{speaker}: {content}")
+        recent_text = "\n".join(last_msgs)
 
-{context_from_last_step}
+        context_text = (
+            f"Summary:\n{summary[:300]}\n\nRecent Conversation:\n{recent_text[:300]}"
+            if summary or recent_text else "No previous conversation available."
+        )
+        print(f"🧾 Using Summary (first 200 chars): {summary[:200]}...")
+        print(f"💬 Using Last 2 Messages:\n{recent_text or '(none)'}")
 
-Based on the goal and the context from the last step, what is the precise query for the '{current_task}' node?
-- The query must be self-contained.
-- Incorporate any necessary information (like names, topics, or data) from the previous step's context.
+    else:
+        
+        last_result = intermediate_results[-1]
+        context_text = (
+            f"Context from previous node ({last_result['node']}):\n"
+            f"{last_result['output'][:300]}"
+        )
+        print(f"📚 Using Previous Node Context: {last_result['node']}")
+    prompt = f"""
+You are a query rewriter for an AI workflow agent.
+Create a concise, self-contained rewritten query for the *next* step.
 
-**Output ONLY the rewritten query. NO explanation. Just the query.**
+User Goal: "{user_query}"
+Plan: {plan}
+Next Step: '{current_task}'
+
+{context_text}
+
+Guidelines:
+- Ensure the rewritten query is **under 150 words**.
+- If this is a follow-up, merge relevant context naturally.
+- If it's a continuation of a multi-node flow, refine using only the previous node’s output.
+- Output ONLY the rewritten query. No explanation or formatting.
 """
+
     try:
-        print(f"🚀 REWRITING QUERY FOR TASK: {current_task}")
-        # Use a fast model for this task
         google_api_key = os.getenv("GOOGLE_API_KEY", "")
-        llm= ChatGoogleGenerativeAI(
-                model="gemini-2.5-flash-lite",
-                temperature=0.3,
-                api_key=google_api_key,
-            )
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash-lite",
+            temperature=0.3,
+            api_key=google_api_key,
+        )
+
+        print("🚀 Sending rewrite prompt to LLM...")
         result = await llm.ainvoke([HumanMessage(content=prompt)])
-        rewritten = result.content.strip()
-        print(f"✅ REWRITTEN QUERY: {rewritten}")
+        rewritten = (result.content or "").strip()
+        words = rewritten.split()
+        if len(words) > 150:
+            rewritten = " ".join(words[:150]) + " ..."
+            print(f"⚠️ Query exceeded 150 words, truncated to {len(rewritten.split())} words.")
+
+        print(f"✅ REWRITTEN QUERY RESULT ({len(rewritten.split())} words): {rewritten}")
+        print("=============================================\n")
         return rewritten
+
     except Exception as e:
         print(f"🚨 Rewrite error: {e}")
-        return user_query # Fallback to the original query on error
+        import traceback
+        traceback.print_exc()
+        print("⚠️ Falling back to original user query.\n")
+        return user_query
+
     
 def normalize_route(name: str) -> str:
     if not name:
@@ -236,7 +324,7 @@ def normalize_route(name: str) -> str:
     }
     return mapping.get(key, name)
 async def orchestrator(state: GraphState) -> GraphState:
-    await summarizer(state, keep_last=3)
+    await summarizer(state, keep_last=2)
     user_query = state.get("user_query", "")
     docs = state.get("doc", [])
     llm_model = state.get("llm_model", "gpt-4o")
@@ -255,18 +343,61 @@ async def orchestrator(state: GraphState) -> GraphState:
     # clean_query = await rewrite_query(state)
     # state["resolved_query"] = clean_query
     new_Doc=state.get("new_uploaded_docs", [])
-    if not state.get("tasks"):
-        result = await analyze_query(user_query, prompt_template, llm_model)
-    
-    print(f"Rag.................", rag)
-    print(f"Deep[research-------------", deep_search)
-
     if not state.get("active_docs"):
         state["active_docs"] = None
         print("[Orchestrator] Initialized active_docs as None.")
 
     if new_Doc:
         state["active_docs"]=new_Doc
+    if not state.get("tasks"):
+        messages = state.get("messages", [])
+        def _format_last_turns_for_prompt(msgs, k=6, max_words_assistant=300):
+            """
+            Builds a condensed conversation history string for the analyzer.
+
+            - Includes the last k messages (both user + assistant)
+            - For Assistant messages, truncates content to ~max_words_assistant words
+            - Keeps user messages fully intact (since they're usually short)
+            """
+            tail = []
+            for m in (msgs or [])[-k:]:
+                role = (m.get("type") or m.get("role") or "").lower()
+                content = m.get("content") if isinstance(m, dict) else getattr(m, "content", "")
+                if not content:
+                    continue
+
+                speaker = "User" if role in ("human", "user") else "Assistant"
+
+                if speaker == "Assistant":
+                    words = content.split()
+                    if len(words) > max_words_assistant:
+                        content = " ".join(words[:max_words_assistant]) + " ..."
+                tail.append(f"{speaker}: {content.strip()}")
+
+            return "\n".join(tail)
+
+
+        ctx = state.get("context", {})
+        sess = ctx.get("session", {})
+        last_route = sess.get("last_route")
+        session_summary = sess.get("summary", "")
+        recent_messages_text = _format_last_turns_for_prompt(messages, k=4)
+        active_docs_present = bool(state.get("active_docs"))
+        
+
+        result = await analyze_query(
+    user_message=user_query,
+    prompt_template=prompt_template,
+    llm=llm_model,
+    recent_messages_text=recent_messages_text,
+    session_summary=session_summary,
+    last_route=last_route,
+    active_docs_present=active_docs_present,
+)
+
+
+
+    
      
     if not state.get("tasks"):
         if state.get("deep_search", False):
@@ -345,16 +476,22 @@ async def orchestrator(state: GraphState) -> GraphState:
                 route = "END"
         state["route"] = route
 
-    print(f"User_query: {user_query}")
-
-     
     ctx = state.setdefault("context", {})
     sess = ctx.setdefault("session", {})
-    history = sess.get("summary", "")
-    latest = f"User: {user_query}\nAssistant: {state.get('response','')}"
-    sess["summary"] = (history + "\n" + latest).strip()
-    ctx["session"] = sess
-    state["context"] = ctx
+
+    # Only update session context if we have a response (after successful execution)
+    if state.get('response'):
+        # Update last_route for next query
+        if state.get('route'):
+            sess["last_route"] = state.get('route')
+        
+        # Update session summary with current topic (not just append)
+        current_topic = f"User asked: {user_query}\nAssistant provided: {state.get('response', '')[:200]}..."
+        sess["summary"] = current_topic  # Replace, don't append
+        
+        ctx["session"] = sess
+        state["context"] = ctx
+
     print(f"Orchestrator routing to: {route}")
     print(f"Orchestrator output state keys: {list(state.keys())}")
     print(f"Route set in state: {state.get('route')}")

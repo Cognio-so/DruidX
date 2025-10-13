@@ -100,6 +100,7 @@ async def run_web_search(state: GraphState) -> GraphState:
     """
     query = state.get("resolved_query") or state.get("user_query", "")
     is_web_search=state.get("web_search", False)
+    state["active_docs"]=None
     system_prompt = WEBSEARCH_PROMPT if is_web_search else WEBSEARCH_BASIC_PROMPT
 
     llm_model = state.get("llm_model", "gpt-4o")

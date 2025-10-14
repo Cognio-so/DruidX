@@ -11,6 +11,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 load_dotenv()
 google_api_key=os.getenv("GOOGLE_API_KEY", "")
 _tavily: Optional[AsyncTavilyClient] = None
+from prompt_cache import normalize_prefix
+
 if os.getenv("TAVILY_API_KEY"):
     try:
         _tavily = AsyncTavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
@@ -52,6 +54,36 @@ WEBSEARCH_BASIC_PROMPT = load_prompt(
     BASIC_PROMPT_PATH,
     "Provide a concise answer (3-10 sentences) based only on the user query and the search results. Cite as [Source X]."
 )
+# === Prompt caching setup for WebSearch ===
+CORE_PREFIX_PATH = os.path.join(os.path.dirname(__file__), "..", "prompts", "core_prefix.md")
+WEBSEARCH_PATH = os.path.join(os.path.dirname(__file__), "websearch.md")
+WEBSEARCH_BASIC_PATH = os.path.join(os.path.dirname(__file__), "websearch_basic.md")
+
+CORE_PREFIX = ""
+WEB_RULES = ""
+WEB_RULES_BASIC = ""
+
+try:
+    with open(CORE_PREFIX_PATH, "r", encoding="utf-8") as f:
+        CORE_PREFIX = f.read()
+except FileNotFoundError:
+    CORE_PREFIX = "You are a reliable research assistant with live search capability."
+
+try:
+    with open(WEBSEARCH_PATH, "r", encoding="utf-8") as f:
+        WEB_RULES = f.read()
+except FileNotFoundError:
+    WEB_RULES = "Format answers clearly with structure and source list."
+
+try:
+    with open(WEBSEARCH_BASIC_PATH, "r", encoding="utf-8") as f:
+        WEB_RULES_BASIC = f.read()
+except FileNotFoundError:
+    WEB_RULES_BASIC = "Provide concise structured answers based on web search."
+
+# Create normalized, cacheable static prefixes
+STATIC_SYS_WEBSEARCH = normalize_prefix([CORE_PREFIX, WEB_RULES])
+STATIC_SYS_WEBSEARCH_BASIC = normalize_prefix([CORE_PREFIX, WEB_RULES_BASIC])
 
 async def web_search(query: str, max_results: int = 5, search_depth: str="basic") -> List[Document]:
     """Perform Tavily web search and return results as LangChain Documents."""
@@ -153,10 +185,11 @@ Now synthesize them into a clear, structured answer with:
                 temperature=0.3,
                 google_api_key=google_api_key,
             )
-        async for chunk in llm.astream([
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=user_prompt)
-        ]):
+        system_msg = SystemMessage(content=STATIC_SYS_WEBSEARCH_BASIC)
+        human_msg = HumanMessage(content=user_prompt)
+
+        async for chunk in llm.astream([system_msg, human_msg]):
+
             if hasattr(chunk, 'content') and chunk.content:
                 full_response += chunk.content
                 print(f"[WebSearch] Basic search - chunk_callback exists: {chunk_callback is not None}")
@@ -170,10 +203,11 @@ Now synthesize them into a clear, structured answer with:
                 temperature=0.3,
                 google_api_key=google_api_key,
             )
-        async for chunk in llm.astream([
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=user_prompt)
-        ]):
+        system_msg = SystemMessage(content=STATIC_SYS_WEBSEARCH)
+        human_msg = HumanMessage(content=user_prompt)
+
+        async for chunk in llm.astream([system_msg, human_msg]):
+
             if hasattr(chunk, 'content') and chunk.content:
                 print(f"[STREAM]-", chunk.content)
                 full_response += chunk.content

@@ -7,6 +7,9 @@ import os
 import json
 from typing import List
 from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+from prompt_cache import normalize_prefix
+
 def load_base_prompt() -> str:
     path = os.path.join(os.path.dirname(__file__), "orchestrator.md")
     try:
@@ -16,6 +19,26 @@ def load_base_prompt() -> str:
         return "You are a Retrieval-Augmented Generation (RAG) assistant. Answer using only the provided context."
 from llm import get_llm
 prompt_template = load_base_prompt()
+# === Prompt caching setup for Orchestrator ===
+CORE_PREFIX_PATH = os.path.join(os.path.dirname(__file__), "..", "prompts", "core_prefix.md")
+
+ORCH_RULES_PATH = os.path.join(os.path.dirname(__file__), "orchestrator.md")
+
+CORE_PREFIX = ""
+ORCH_RULES = ""
+try:
+    with open(CORE_PREFIX_PATH, "r", encoding="utf-8") as f:
+        CORE_PREFIX = f.read()
+except FileNotFoundError:
+    CORE_PREFIX = "You are a core AI routing system."
+
+try:
+    with open(ORCH_RULES_PATH, "r", encoding="utf-8") as f:
+        ORCH_RULES = f.read()
+except FileNotFoundError:
+    ORCH_RULES = "You are a router deciding the next node."
+
+STATIC_SYS = normalize_prefix([CORE_PREFIX, ORCH_RULES])
 
 
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -45,7 +68,7 @@ async def summarizer(state, keep_last=2):
     older = msgs[:-keep_last]
     recent = msgs[-keep_last:]
 
-
+    print(f"session summary caleed-----------------------------------//////")
     def truncate_text(text: str, word_limit: int = 300):
         words = text.split()
         return " ".join(words[:word_limit]) + ("..." if len(words) > word_limit else "")
@@ -181,7 +204,24 @@ async def analyze_query(
         print(f"recent_messages_text..............", recent_messages_text)
         print(f"session_summary..............", session_summary)
         print(f"[Analyzer] Model: {llm}")
-        messages = [SystemMessage(content=prompt), HumanMessage(content=user_message)]
+        print(f" lastt- rout_______________-----", last_route)
+        # --- Build static + dynamic messages for caching ---
+        system_msg = SystemMessage(content=STATIC_SYS)
+        # print(f"--------------system_prompt----------", system_msg)
+        # Create dynamic text separately (NOT part of system prompt)
+        dynamic_context = f"""
+        User Message:
+        {user_message}
+
+        Recent Messages:
+        {recent_messages_text[:300] or '(none)'}
+
+        Last Route: {last_route or 'None'}
+        Active Docs Present: {bool(active_docs_present)}
+        """
+
+        messages = [system_msg, HumanMessage(content=dynamic_context)]
+
 
         google_api_key = os.getenv("GOOGLE_API_KEY", "")
         chat = ChatGoogleGenerativeAI(
@@ -215,13 +255,20 @@ def _get_last_output(state: GraphState) -> dict | None:
 
 
 async def rewrite_query(state: GraphState) -> str:
-    """
-    Rewrites the query dynamically.
-    - If it's the first node (new user query): uses summary + recent conversation.
-    - If it's a multi-node continuation: uses previous node's output.
-    - Ensures rewritten query ≤ 150 words.
-    Includes detailed debug prints.
-    """
+    # === Prompt caching setup for Query Rewriter ===
+    REWRITE_CORE_PREFIX = """
+You are a query rewriting expert inside an AI Orchestrator.
+Your job is to take the user goal, current plan step, and limited context,
+and produce a concise, self-contained rewritten query for the next node.
+
+Follow these permanent rules:
+- Never include explanations.
+- Keep response ≤ 150 words.
+- Maintain factual and logical continuity.
+"""
+
+    STATIC_SYS_REWRITE = normalize_prefix([CORE_PREFIX, REWRITE_CORE_PREFIX])
+
     user_query = state.get("user_query", "")
     current_task = state.get("current_task", "")
     plan = state.get("tasks", [])
@@ -289,8 +336,11 @@ Guidelines:
             api_key=google_api_key,
         )
 
-        print("🚀 Sending rewrite prompt to LLM...")
-        result = await llm.ainvoke([HumanMessage(content=prompt)])
+        system_msg = SystemMessage(content=STATIC_SYS_REWRITE)
+        human_msg = HumanMessage(content=prompt)
+        print("🚀 Sending rewrite prompt to LLM with cached prefix...")
+        result = await llm.ainvoke([system_msg, human_msg])
+
         rewritten = (result.content or "").strip()
         words = rewritten.split()
         if len(words) > 150:
@@ -324,7 +374,7 @@ def normalize_route(name: str) -> str:
     }
     return mapping.get(key, name)
 async def orchestrator(state: GraphState) -> GraphState:
-    await summarizer(state, keep_last=2)
+    # await summarizer(state, keep_last=2)
     user_query = state.get("user_query", "")
     docs = state.get("doc", [])
     llm_model = state.get("llm_model", "gpt-4o")
@@ -381,7 +431,7 @@ async def orchestrator(state: GraphState) -> GraphState:
         sess = ctx.get("session", {})
         last_route = sess.get("last_route")
         session_summary = sess.get("summary", "")
-        recent_messages_text = _format_last_turns_for_prompt(messages, k=4)
+        recent_messages_text = _format_last_turns_for_prompt(messages, k=2)
         active_docs_present = bool(state.get("active_docs"))
         
 
@@ -405,7 +455,7 @@ async def orchestrator(state: GraphState) -> GraphState:
             plan = ["deepResearch"]
             state["resolved_query"] = user_query   # keep raw query
         else:
-            plan = result.get("execution_order", [])
+            plan = result.get("execution_order", []) if result else ["SimpleLLM"]
             if uploaded_doc:
                 print(f"hi......................")
                 if len(plan) == 1 and plan[0].lower() == "rag":
@@ -428,12 +478,18 @@ async def orchestrator(state: GraphState) -> GraphState:
         route =normalize_route(plan[0]) 
         
                 
-        if len(plan)==1 and plan[0]=="rag":
+        if len(plan)==1:
                 state["resolved_query"] = user_query
         else:
                state["resolved_query"]=await rewrite_query(state)
        
         state["route"] = route
+        ctx = state.get("context") or {}
+        sess = ctx.get("session") or {}
+        sess["last_route"] = route
+        print(f"----last_rut--------", sess["last_route"])
+        ctx["session"] = sess
+        state["context"] = ctx
 
     else:
         completed = state.get("current_task")
@@ -475,23 +531,16 @@ async def orchestrator(state: GraphState) -> GraphState:
                     state["final_answer"] = state.get("response", "Task completed.")
                 route = "END"
         state["route"] = route
+         
 
-    ctx = state.setdefault("context", {})
-    sess = ctx.setdefault("session", {})
-
-    # Only update session context if we have a response (after successful execution)
+    
+   
+    
     if state.get('response'):
-        # Update last_route for next query
-        if state.get('route'):
-            sess["last_route"] = state.get('route')
-        
-        # Update session summary with current topic (not just append)
-        current_topic = f"User asked: {user_query}\nAssistant provided: {state.get('response', '')[:200]}..."
-        sess["summary"] = current_topic  # Replace, don't append
-        
         ctx["session"] = sess
         state["context"] = ctx
-
+    if state.get("route") == "END":
+        await summarizer(state, keep_last=2)
     print(f"Orchestrator routing to: {route}")
     print(f"Orchestrator output state keys: {list(state.keys())}")
     print(f"Route set in state: {state.get('route')}")

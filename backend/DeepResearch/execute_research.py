@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 import re
 from graph_type import GraphState
 from WebSearch.websearch import web_search
-from llm import get_reasoning_llm
+from llm import get_reasoning_llm, get_llm
 
 
 class WebPageExtractor:
@@ -255,53 +255,101 @@ Respond with ONLY the numbers (comma-separated, e.g., "3,7"):"""
 
 async def execute_research_node(state: GraphState) -> GraphState:
     """
-    Enhanced research execution with:
+    Enhanced research execution with streaming output:
     1. Web search for initial results
     2. Full content extraction from top pages
     3. Intelligent link following for deeper information
     4. Multi-level content aggregation
+    5. Stream all progress to user
     """
     research_state_dict = state["deep_research_state"]
     current_iteration = research_state_dict["current_iteration"]
     max_iterations = research_state_dict["max_iterations"]
     
+    chunk_callback = state.get("_chunk_callback")
+
+    execution_intro = f"## 🔬 Research Execution Phase - Iteration {current_iteration + 1}/{max_iterations}\n\n"
+    if chunk_callback:
+        await chunk_callback(execution_intro)
+    
     print(f"\n[DeepResearch] === Iteration {current_iteration + 1}/{max_iterations} ===")
    
     if current_iteration == 0:
         queries_to_research = research_state_dict["research_plan"]
+        iteration_type = "Initial Research Plan"
     else:
         queries_to_research = research_state_dict["knowledge_gaps"]
+        iteration_type = "Knowledge Gap Analysis"
         print(f"[DeepResearch] Knowledge gaps to explore: {len(queries_to_research)}")
     
     if not queries_to_research:
+        no_queries_msg = "\n\n✅ **No more queries to research. Moving to synthesis phase...**\n\n"
+        if chunk_callback:
+            await chunk_callback(no_queries_msg)
         print("[DeepResearch] No queries to research, moving to synthesis")
         state["route"] = "synthesize_report"
         return state
+    iteration_info = f"**{iteration_type}:** Processing {len(queries_to_research)} research questions...\n\n"
+    if chunk_callback:
+        await chunk_callback(iteration_info)
 
     extractor = WebPageExtractor()
-    llm = get_reasoning_llm()
+    llm_model=state.get("llm_model")
+    llm=get_llm(llm_model, 0.01)
+    # llm = get_reasoning_llm()
     
     findings = []
+    full_response = execution_intro + iteration_info
 
     for query_idx, query in enumerate(queries_to_research[:6], 1): 
+        query_header = f"### 🔍 Research Question {query_idx}/{min(6, len(queries_to_research))}\n**Query:** {query}\n\n"
+        if chunk_callback:
+            await chunk_callback(query_header)
+        full_response += query_header
+        
         print(f"\n[DeepResearch] [{query_idx}/{min(6, len(queries_to_research))}] Researching: {query}")
         
         try:
+            search_msg = "🌐 **Phase 1: Web Search**\nSearching for relevant information...\n\n"
+            if chunk_callback:
+                await chunk_callback(search_msg)
+            full_response += search_msg
             
             print(f"[DeepResearch] → Phase 1: Web search...")
             search_results = await web_search(query, max_results=5, search_depth="advanced")
             
             if not search_results:
+                no_results_msg = "❌ **No search results found for this query.**\n\n"
+                if chunk_callback:
+                    await chunk_callback(no_results_msg)
+                full_response += no_results_msg
                 print(f"[DeepResearch] ✗ No search results found")
                 continue
+    
+            search_summary = f"✅ **Found {len(search_results)} search results**\n"
+            if chunk_callback:
+                await chunk_callback(search_summary)
+            full_response += search_summary
         
             search_urls = [
                 doc.metadata.get('url') 
                 for doc in search_results 
                 if doc.metadata.get('url')
-            ][:3]  
+            ][:3]
+            
+            urls_msg = f"📄 **Processing {len(search_urls)} URLs:**\n"
+            for i, url in enumerate(search_urls, 1):
+                urls_msg += f"{i}. {url}\n"
+            urls_msg += "\n"
+            if chunk_callback:
+                await chunk_callback(urls_msg)
+            full_response += urls_msg
             
             print(f"[DeepResearch] Found {len(search_urls)} URLs to extract")
+            extraction_msg = f"📖 **Phase 2: Content Extraction**\nExtracting content from web pages...\n\n"
+            if chunk_callback:
+                await chunk_callback(extraction_msg)
+            full_response += extraction_msg
             
             print(f"[DeepResearch] → Phase 2: Extracting content from {len(search_urls)} pages...")
             
@@ -313,7 +361,8 @@ async def execute_research_node(state: GraphState) -> GraphState:
         
             primary_content = []
             all_links = []
-            
+
+            extraction_results = "**Primary Sources Extracted:**\n"
             for page_data in extracted_pages:
                 if page_data and page_data['success']:
                     primary_content.append({
@@ -326,13 +375,23 @@ async def execute_research_node(state: GraphState) -> GraphState:
                     })
                     all_links.extend(page_data['links'])
                     
+                    source_info = f"✅ **{page_data['title'][:60]}...**\n"
+                    source_info += f"   📊 Content: {page_data['content_length']} characters\n"
+                    source_info += f"   🔗 URL: {page_data['url']}\n\n"
+                    if chunk_callback:
+                        await chunk_callback(source_info)
+                    full_response += source_info
+                    
                     print(f"[DeepResearch]   ✓ {page_data['title'][:50]}... ({page_data['content_length']} chars)")
             
             secondary_content = []
-            
             if current_iteration == 0 and all_links and len(primary_content) > 0:
-                print(f"[DeepResearch] → Phase 3: Analyzing {len(all_links)} links for relevance...")
+                link_analysis_msg = f"🔗 **Phase 3: Link Analysis**\nAnalyzing {len(all_links)} links for deeper information...\n\n"
+                if chunk_callback:
+                    await chunk_callback(link_analysis_msg)
+                full_response += link_analysis_msg
                 
+                print(f"[DeepResearch] → Phase 3: Analyzing {len(all_links)} links for relevance...")
                 
                 relevant_urls = await select_relevant_links(
                     all_links, 
@@ -342,6 +401,14 @@ async def execute_research_node(state: GraphState) -> GraphState:
                 )
                 
                 if relevant_urls:
+                    follow_msg = f"🎯 **Following {len(relevant_urls)} relevant links for deeper research:**\n"
+                    for i, url in enumerate(relevant_urls, 1):
+                        follow_msg += f"{i}. {url}\n"
+                    follow_msg += "\n"
+                    if chunk_callback:
+                        await chunk_callback(follow_msg)
+                    full_response += follow_msg
+                    
                     print(f"[DeepResearch] → Following {len(relevant_urls)} relevant links...")
                     
                     follow_tasks = [
@@ -349,7 +416,7 @@ async def execute_research_node(state: GraphState) -> GraphState:
                         for url in relevant_urls
                     ]
                     followed_pages = await asyncio.gather(*follow_tasks)
-                    
+                    secondary_results = "**Secondary Sources (Followed Links):**\n"
                     for page_data in followed_pages:
                         if page_data and page_data['success']:
                             secondary_content.append({
@@ -360,10 +427,19 @@ async def execute_research_node(state: GraphState) -> GraphState:
                                 'metadata': page_data.get('metadata', {}),
                                 'depth': 2
                             })
+                            secondary_info = f"✅ **{page_data['title'][:60]}...**\n"
+                            secondary_info += f"   📊 Content: {page_data['content_length']} characters\n"
+                            secondary_info += f"   🔗 URL: {page_data['url']}\n\n"
+                            if chunk_callback:
+                                await chunk_callback(secondary_info)
+                            full_response += secondary_info
                             
                             print(f"[DeepResearch]   → Followed: {page_data['title'][:50]}...")
-            
-            
+                else:
+                    no_relevant_msg = "ℹ️ **No additional relevant links found to follow.**\n\n"
+                    if chunk_callback:
+                        await chunk_callback(no_relevant_msg)
+                    full_response += no_relevant_msg
             if primary_content or secondary_content:
                 total_sources = len(primary_content) + len(secondary_content)
                 
@@ -379,26 +455,65 @@ async def execute_research_node(state: GraphState) -> GraphState:
                 }
                 
                 findings.append(finding)
+                completion_summary = f"🎉 **Query Complete!**\n"
+                completion_summary += f"📚 **Total Sources:** {total_sources} (Primary: {len(primary_content)}, Secondary: {len(secondary_content)})\n"
+                completion_summary += f"🔗 **URLs Gathered:** {len(finding['urls'])}\n\n"
+                completion_summary += "---\n\n"
+                if chunk_callback:
+                    await chunk_callback(completion_summary)
+                full_response += completion_summary
+                
                 print(f"[DeepResearch] ✓ Gathered {total_sources} sources (L1: {len(primary_content)}, L2: {len(secondary_content)})")
+            else:
+                no_content_msg = "❌ **No content could be extracted from this query.**\n\n---\n\n"
+                if chunk_callback:
+                    await chunk_callback(no_content_msg)
+                full_response += no_content_msg
 
             if query_idx < len(queries_to_research):
                 await asyncio.sleep(1.5)
                 
         except Exception as e:
+            error_msg = f"❌ **Error researching query:** {str(e)}\n\n---\n\n"
+            if chunk_callback:
+                await chunk_callback(error_msg)
+            full_response += error_msg
             print(f"[DeepResearch] Error researching '{query}': {e}")
             import traceback
             traceback.print_exc()
             continue
-
     if findings:
         research_state_dict["gathered_information"].extend(findings)
+        
+        iteration_complete = f"## ✅ Iteration {current_iteration + 1} Complete\n\n"
+        iteration_complete += f"📊 **Findings Summary:**\n"
+        iteration_complete += f"- **Queries Processed:** {len(findings)}\n"
+        iteration_complete += f"- **Total Sources:** {sum(f['total_sources'] for f in findings)}\n"
+        iteration_complete += f"- **URLs Collected:** {sum(len(f['urls']) for f in findings)}\n\n"
+        
+        if research_state_dict["current_iteration"] + 1 < max_iterations:
+            iteration_complete += f"🔄 **Next:** Moving to gap analysis for iteration {current_iteration + 2}...\n\n"
+        else:
+            iteration_complete += f"🎯 **Next:** Moving to final synthesis...\n\n"
+            
+        if chunk_callback:
+            await chunk_callback(iteration_complete)
+        full_response += iteration_complete
+        
         print(f"\n[DeepResearch] === Iteration Complete: Added {len(findings)} findings ===")
         
         for finding in findings:
             if 'urls' in finding:
                 research_state_dict["sources"].extend(finding['urls'])
     else:
+        no_findings_msg = f"## ⚠️ Iteration {current_iteration + 1} Complete\n\n"
+        no_findings_msg += f"❌ **No findings gathered in this iteration.**\n\n"
+        if chunk_callback:
+            await chunk_callback(no_findings_msg)
+        full_response += no_findings_msg
+        
         print(f"\n[DeepResearch] === Iteration Complete: No findings gathered ===")
+    state["response"] = ""
     
     research_state_dict["current_iteration"] += 1
     state["deep_research_state"] = research_state_dict

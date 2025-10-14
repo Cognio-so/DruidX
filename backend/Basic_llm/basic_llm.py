@@ -5,16 +5,35 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_openai import ChatOpenAI
 import os
 from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+from prompt_cache import normalize_prefix
 
 # Remove this line - don't set it at module level
 # google_api_key=os.getenv("GOOGLE_API_KEY", "")
 
-prompt_path = os.path.join(os.path.dirname(__file__), "basic_llm.md")
+# === Prompt caching setup ===
+CORE_PREFIX_PATH = os.path.join(os.path.dirname(__file__), "..", "prompts", "core_prefix.md")
+
+BASIC_RULES_PATH = os.path.join(os.path.dirname(__file__), "basic_llm.md")
+
+# Load static system parts once
+CORE_PREFIX = ""
+BASIC_RULES = ""
 try:
-    with open(prompt_path, 'r', encoding='utf-8') as f:
-        prompt = f.read()
+    with open(CORE_PREFIX_PATH, "r", encoding="utf-8") as f:
+        CORE_PREFIX = f.read()
 except FileNotFoundError:
-    prompt = "You are a helpful AI assistant."
+    CORE_PREFIX = "You are a helpful AI assistant."
+
+try:
+    with open(BASIC_RULES_PATH, "r", encoding="utf-8") as f:
+        BASIC_RULES = f.read()
+except FileNotFoundError:
+    BASIC_RULES = "Follow standard instructions."
+
+# Combine into one normalized static system prefix (identical every call)
+STATIC_SYS = normalize_prefix([CORE_PREFIX, BASIC_RULES])
+
 
 async def SimpleLLm(state: GraphState) -> GraphState:
     llm_model = state.get("llm_model", "gpt-4o-mini")
@@ -32,20 +51,18 @@ async def SimpleLLm(state: GraphState) -> GraphState:
         if not google_api_key:
             print("No Google API key found, falling back to OpenAI")
             from llm import get_llm
-            chat=get_llm(llm_model, 0.3)  # Increased temperature for better responses
+            chat=get_llm(llm_model, 0.6)  
         else:
             chat= ChatGoogleGenerativeAI(
                 model="gemini-2.5-flash-lite",
-                temperature=0.3,
+                temperature=0.7,
                 api_key=google_api_key,
             )
         
-        # Only use summary + very recent messages
         formatted_history = []
         if summary:
             formatted_history.append(SystemMessage(content=f"Conversation summary so far:\n{summary}"))
 
-        # Only last 2 messages (much smaller)
         for m in past_messages[-2:]:
             role = (m.get("type") or m.get("role") or "").lower()
             content = m.get("content") if isinstance(m, dict) else getattr(m, "content", "")
@@ -59,25 +76,24 @@ async def SimpleLLm(state: GraphState) -> GraphState:
                     formatted_history.append(HumanMessage(content=content))
                 else:
                     formatted_history.append(AIMessage(content=content))
+        system_msg = SystemMessage(content=STATIC_SYS)
+        messages = [system_msg] + formatted_history + [HumanMessage(content=user_query)]
 
-        # Create the final message list
-        messages = [SystemMessage(content=prompt)] + formatted_history + [HumanMessage(content=user_query)]
 
         print(f"Sending messages to LLM: {len(messages)} messages")
         print(f"Current query: {user_query}")
-        
-        # Stream the response and collect it
+    
         full_response = ""
         async for chunk in chat.astream(messages):
             if hasattr(chunk, 'content') and chunk.content:
                 full_response += chunk.content
                 print(f"Streaming chunk: {chunk.content[:50]}...")
                 
-                # If the callback exists, send the chunk immediately!
+                
                 if chunk_callback:
                     await chunk_callback(chunk.content)
         
-        # Add line breaks after streaming completes
+        
         if chunk_callback:
             await chunk_callback("\n\n")
             full_response += "\n\n"

@@ -12,6 +12,8 @@ from WebSearch.websearch import web_search
 from rank_bm25 import BM25Okapi
 import re
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
+from prompt_cache import normalize_prefix
+
 QDRANT_URL = os.getenv("QDRANT_URL", ":memory:")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 from llm import get_llm
@@ -40,6 +42,28 @@ def load_base_prompt() -> str:
         return "You are a Retrieval-Augmented Generation (RAG) assistant. Answer using only the provided context."
 
 base_rag_prompt = load_base_prompt()
+# === Prompt caching setup for RAG ===
+# === Prompt caching setup for RAG ===
+CORE_PREFIX_PATH = os.path.join(os.path.dirname(__file__), "..", "prompts", "core_prefix.md")
+RAG_RULES_PATH = os.path.join(os.path.dirname(__file__), "Rag.md")
+
+CORE_PREFIX = ""
+RAG_RULES = ""
+
+try:
+    with open(CORE_PREFIX_PATH, "r", encoding="utf-8") as f:
+        CORE_PREFIX = f.read()
+except FileNotFoundError:
+    CORE_PREFIX = "You are a helpful AI assistant using retrieval."
+
+try:
+    with open(RAG_RULES_PATH, "r", encoding="utf-8") as f:
+        RAG_RULES = f.read()
+except FileNotFoundError:
+    RAG_RULES = "You are a retrieval-augmented generation assistant."
+
+STATIC_SYS_RAG = normalize_prefix([CORE_PREFIX, RAG_RULES])
+
 
 BM25_INDICES = {}
 async def send_status_update(state: GraphState, message: str, progress: int = None):
@@ -487,39 +511,44 @@ async def Rag(state: GraphState) -> GraphState:
 
     final_context_message = HumanMessage(content="\n".join(context_parts))
 
-    enhanced_system_prompt = f"""{base_rag_prompt}
+    # --- Use static cacheable system prefix + dynamic prompt ---
+    system_msg = SystemMessage(content=STATIC_SYS_RAG)
 
----
-# CUSTOM GPT CONFIGURATION
-{custom_system_prompt if custom_system_prompt else 'No custom instructions provided.'}
+    dynamic_prompt = f"""
+    # CUSTOM GPT CONFIGURATION
+    {custom_system_prompt if custom_system_prompt else 'No custom instructions provided.'}
 
----
-# SOURCE-AWARE RESPONSE RULES
+    ---
+    # SOURCE-AWARE RESPONSE RULES
+    **Critical Instructions:**
+    - The system has intelligently selected which knowledge sources to use for this query.
+    - ONLY use the provided context sections below.
+    - If only User Document Context is provided: Focus exclusively on the user's documents.
+    - If only Knowledge Base Context is provided: Focus exclusively on standards/guidelines.
+    - If both are provided: Integrate both sources appropriately.
+    - If no retrieval context: Use general knowledge and conversation history.
+    - If only KB is available but user documents are expected: Politely explain that documents need to be uploaded for analysis.
 
-**Critical Instructions:**
-- The system has intelligently selected which knowledge sources to use for this query
-- ONLY use the provided context sections in your response
-- If only User Document Context is provided: Focus exclusively on the user's documents
-- If only Knowledge Base Context is provided: Focus exclusively on standards/guidelines
-- If both are provided: Integrate both sources appropriately
-- If no retrieval context: Use general knowledge and conversation history
-- If only KB is available but user documents are expected: Politely explain that documents need to be uploaded for analysis
+    **Output Formatting:**
+    - For summaries: Use clear paragraphs with key points highlighted.
+    - For searches: Present findings with specific references.
+    - For comparisons: Use structured comparison format (tables if useful).
+    - For analysis: Provide detailed breakdown with clear sections.
+    - Always avoid meta-commentary about sources unless asked.
 
-**Output Formatting:**
-- For summaries: Use clear paragraphs with key points highlighted
-- For searches: Present findings with specific references
-- For comparisons: Use structured comparison format and if possible use the proper table.
-- For analysis: Provide detailed breakdown with clear sections
-- Always be direct and avoid meta-commentary about sources unless specifically asked
-"""
+    ---
+    # CONTEXT SECTIONS
+    {final_context_message.content}
+    """
 
     final_messages = [
-        SystemMessage(content=enhanced_system_prompt),
-        final_context_message
+        system_msg,
+        HumanMessage(content=dynamic_prompt)
     ]
-    
-    await send_status_update(state, "🤖 Generating response from retrieved information...", 90)
+
     llm=get_llm(llm_model,0.3)
+    await send_status_update(state, "🤖 Generating response from retrieved information...", 90)
+   
     print(f"model named used in rag.....", llm_model)
     chunk_callback = state.get("_chunk_callback")
     full_response = ""

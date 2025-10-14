@@ -347,7 +347,13 @@ async def stream_chat(session_id: str, request: ChatRequest):
             rag=request.rag, 
             deep_search=request.deep_search,  
             uploaded_doc=request.uploaded_doc,
-            last_route=session.get("last_route"),  # <--- ADD THIS LINE
+            last_route=session.get("last_route"), 
+            context={  # Add this
+        "session": {
+            "summary": session.get("summary", ""),
+            "last_route": session.get("last_route")
+        }
+    }, # <--- ADD THIS LINE
             _chunk_callback=chunk_callback  # Add this line
         )
         
@@ -443,7 +449,15 @@ async def stream_chat(session_id: str, request: ChatRequest):
                         session["img_urls"] = state.get("img_urls", [])
                     
                     SessionManager.update_session(session_id, session)
-                
+                if state.get("context", {}).get("session", {}).get("summary"):
+                    session["summary"] = state["context"]["session"]["summary"]
+
+                if state.get("context", {}).get("session", {}).get("last_route"):
+                    session["last_route"] = state["context"]["session"]["last_route"]
+
+                # Update session with context data
+                if state.get("context", {}).get("session"):
+                    SessionManager.update_session(session_id, session)
                 # Always update last_route, even if response is empty
                 if state.get("route"):
                     session["last_route"] = state["route"]

@@ -41,6 +41,8 @@ async def SimpleLLm(state: GraphState) -> GraphState:
     past_messages = state.get("messages", [])
     summary = state.get("context", {}).get("session", {}).get("summary", "")
     chunk_callback = state.get("_chunk_callback")
+    gpt_config = state.get("gpt_config", {})
+    custom_system_prompt = gpt_config.get("instruction", "")
     try:
         print(f"SimpleLLM processing query: {user_query}")
         print(f"Using model: {llm_model}")
@@ -67,7 +69,7 @@ async def SimpleLLm(state: GraphState) -> GraphState:
             role = (m.get("type") or m.get("role") or "").lower()
             content = m.get("content") if isinstance(m, dict) else getattr(m, "content", "")
             if content:
-                # Truncate if too long
+                
                 if len(content.split()) > 300:
                    content = " ".join(content.split()[:300]) + "..."
 
@@ -76,7 +78,20 @@ async def SimpleLLm(state: GraphState) -> GraphState:
                     formatted_history.append(HumanMessage(content=content))
                 else:
                     formatted_history.append(AIMessage(content=content))
-        system_msg = SystemMessage(content=STATIC_SYS)
+      
+        enhanced_prompt = f"""{STATIC_SYS}
+
+# CUSTOM GPT INSTRUCTIONS
+{custom_system_prompt if custom_system_prompt else ''}
+
+# INTELLIGENT BEHAVIOR GUIDELINES
+- If the user provides content (text, code, data) without specific instructions, automatically apply the custom GPT instructions above
+- If the user asks a specific question or gives explicit instructions, follow their request while incorporating relevant custom GPT capabilities when helpful
+- Always prioritize the user's explicit requests, but enhance responses with your custom GPT expertise when appropriate
+- For content without instructions: automatically process it according to your custom GPT purpose (summarize, analyze, review, etc.)
+- For questions/requests: answer directly while leveraging your custom GPT knowledge to provide better responses"""
+        
+        system_msg = SystemMessage(content=enhanced_prompt)
         messages = [system_msg] + formatted_history + [HumanMessage(content=user_query)]
 
 

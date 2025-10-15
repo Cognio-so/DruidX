@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_groq import ChatGroq
 import uuid  
 from typing import List, Optional, Dict, Any
 import os
@@ -42,8 +43,6 @@ def load_base_prompt() -> str:
         return "You are a Retrieval-Augmented Generation (RAG) assistant. Answer using only the provided context."
 
 base_rag_prompt = load_base_prompt()
-# === Prompt caching setup for RAG ===
-# === Prompt caching setup for RAG ===
 CORE_PREFIX_PATH = os.path.join(os.path.dirname(__file__), "..", "prompts", "core_prefix.md")
 RAG_RULES_PATH = os.path.join(os.path.dirname(__file__), "Rag.md")
 
@@ -66,6 +65,141 @@ STATIC_SYS_RAG = normalize_prefix([CORE_PREFIX, RAG_RULES])
 
 
 BM25_INDICES = {}
+KB_EMBEDDING_CACHE = {}
+USER_DOC_EMBEDDING_CACHE = {}
+
+
+
+import hashlib
+import time
+
+
+
+def clear_kb_cache(collection_name: str = None):
+    """Clear KB embedding cache for a specific collection or all collections"""
+    global KB_EMBEDDING_CACHE
+    if collection_name:
+        if collection_name in KB_EMBEDDING_CACHE:
+            del KB_EMBEDDING_CACHE[collection_name]
+            print(f"[RAG] Cleared KB cache for {collection_name}")
+    else:
+        KB_EMBEDDING_CACHE.clear()
+        print("[RAG] Cleared all KB embedding cache")
+
+def clear_user_doc_cache(session_id: str = None):
+    """Clear user document embedding cache for a specific session or all sessions"""
+    global USER_DOC_EMBEDDING_CACHE, BM25_INDICES
+    if session_id:
+        if session_id in USER_DOC_EMBEDDING_CACHE:
+            collection_name = USER_DOC_EMBEDDING_CACHE[session_id].get("collection_name")
+            del USER_DOC_EMBEDDING_CACHE[session_id]
+            print(f"[RAG] Cleared user doc cache for session {session_id}")
+            if collection_name and collection_name in BM25_INDICES:
+                del BM25_INDICES[collection_name]
+                print(f"[RAG] Cleared BM25 index for {collection_name}")
+    else:
+        USER_DOC_EMBEDDING_CACHE.clear()
+        BM25_INDICES.clear()
+        print("[RAG] Cleared all user document caches (embeddings, BM25)")
+
+async def preprocess_kb_documents(kb_docs: List[dict], session_id: str, is_hybrid: bool = False):
+    """
+    Pre-process KB documents when custom GPT is loaded.
+    Generate embeddings once and cache for the session.
+    """
+    if not kb_docs:
+        return
+    
+    collection_name = f"kb_{session_id}"
+
+    if session_id in KB_EMBEDDING_CACHE:
+        print(f"[RAG] KB already processed for session {session_id}")
+        return
+    
+    # print(f"[RAG] Pre-processing {len(kb_docs)} KB documents for session {session_id}")
+
+    kb_texts = []
+    for doc in kb_docs:
+        if isinstance(doc, dict) and "content" in doc:
+            kb_texts.append(doc["content"])
+        else:
+            kb_texts.append(str(doc))
+
+    await retreive_docs(kb_texts, collection_name, is_hybrid=is_hybrid, clear_existing=False, is_kb=True)
+    
+    KB_EMBEDDING_CACHE[session_id] = {
+        "collection_name": collection_name,
+        "is_hybrid": is_hybrid,
+        "processed_at": asyncio.get_event_loop().time(),
+        "document_count": len(kb_texts)
+    }
+    
+    print(f"[RAG] Pre-processed and cached {len(kb_texts)} KB documents for session {session_id}")
+
+async def preprocess_user_documents(docs: List[dict], session_id: str, is_hybrid: bool = False, is_new_upload: bool = False):
+    """
+    Pre-process user documents by generating embeddings and storing them in cache.
+    This is called immediately after document upload to prepare for fast RAG retrieval.
+    
+    Args:
+        docs: List of document dictionaries with content (ONLY the new documents)
+        session_id: Session identifier for cache management
+        is_hybrid: Whether to use hybrid RAG (BM25 + vector)
+        is_new_upload: Whether this is a new document upload (clears old cache and processes only new docs)
+    """
+    if not docs:
+        return
+    
+    collection_name = f"user_docs_{session_id}"
+
+    if is_new_upload:
+        if session_id in USER_DOC_EMBEDDING_CACHE:
+            old_collection_name = USER_DOC_EMBEDDING_CACHE[session_id].get("collection_name")
+            print(f"🔥 [CACHE-DEBUG] Found old collection: {old_collection_name}")
+            
+            del USER_DOC_EMBEDDING_CACHE[session_id]
+            print(f"🔥 [CACHE-DEBUG] Cleared existing user doc cache for session {session_id}")
+            
+            if old_collection_name and old_collection_name in BM25_INDICES:
+                del BM25_INDICES[old_collection_name]
+                print(f"🔥 [CACHE-DEBUG] Cleared old BM25 index for {old_collection_name}")
+            else:
+                print(f"🔥 [CACHE-DEBUG] No old BM25 index found for {old_collection_name}")
+        else:
+            print(f"🔥 [CACHE-DEBUG] No existing cache found for session {session_id}")
+    
+        try:
+            collections_response = await asyncio.to_thread(QDRANT_CLIENT.get_collections)
+            collections = [c.name for c in collections_response.collections]
+            print(f"🔥 [CACHE-DEBUG] Current Qdrant collections: {collections}")
+            if collection_name in collections:
+                await asyncio.to_thread(QDRANT_CLIENT.delete_collection, collection_name=collection_name)
+                print(f"🔥 [CACHE-DEBUG] Deleted existing collection: {collection_name}")
+            else:
+                print(f"🔥 [CACHE-DEBUG] Collection {collection_name} not found in Qdrant")
+        except Exception as e:
+            print(f"🔥 [CACHE-DEBUG] Warning: Failed to clear existing collection {collection_name}: {e}")
+    
+    print(f"[RAG] Pre-processing {len(docs)} NEW user documents for session {session_id}")
+
+    doc_texts = []
+    for doc in docs:
+        if isinstance(doc, dict) and "content" in doc:
+            doc_texts.append(doc["content"])
+        else:
+            doc_texts.append(str(doc))
+
+    await retreive_docs(doc_texts, collection_name, is_hybrid=is_hybrid, clear_existing=is_new_upload, is_user_doc=True)
+
+    USER_DOC_EMBEDDING_CACHE[session_id] = {
+        "collection_name": collection_name,
+        "is_hybrid": is_hybrid,
+        "processed_at": asyncio.get_event_loop().time(),
+        "document_count": len(doc_texts)  
+    }
+    
+    print(f"[RAG] Pre-processed and cached {len(doc_texts)} NEW user documents for session {session_id}")
+
 async def send_status_update(state: GraphState, message: str, progress: int = None):
     """Send status update if callback is available"""
     if hasattr(state, '_status_callback') and state._status_callback:
@@ -78,16 +212,33 @@ async def send_status_update(state: GraphState, message: str, progress: int = No
                 "progress": progress
             }
         })
-async def retreive_docs(doc: List[str], name: str, is_hybrid: bool= False):
+async def retreive_docs(doc: List[str], name: str, is_hybrid: bool = False, clear_existing: bool = False, is_kb: bool = False, is_user_doc: bool = False):
     EMBEDDING_MODEL = OpenAIEmbeddings(model="text-embedding-3-small")
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
     chunked_docs = text_splitter.create_documents(doc)
+
+    if is_kb and name in KB_EMBEDDING_CACHE:
+        print(f"[RAG] Using cached KB embeddings for {name}")
+        embeddings = KB_EMBEDDING_CACHE[name]["embeddings"]
+        chunked_docs = KB_EMBEDDING_CACHE[name]["chunked_docs"]
+    else:
+        embeddings = await EMBEDDING_MODEL.aembed_documents([doc.page_content for doc in chunked_docs])
+        
+        if is_kb:
+            KB_EMBEDDING_CACHE[name] = {
+                "embeddings": embeddings,
+                "chunked_docs": chunked_docs
+            }
+            print(f"[RAG] Cached KB embeddings for {name} ({len(embeddings)} chunks)")
     
-    embeddings = await EMBEDDING_MODEL.aembed_documents([doc.page_content for doc in chunked_docs])
-    
-    # Instead of always recreating
     collections_response = await asyncio.to_thread(QDRANT_CLIENT.get_collections)
     collections = [c.name for c in collections_response.collections]
+    
+    if clear_existing and name in collections:
+        print(f"[RAG] Clearing existing collection: {name}")
+        await asyncio.to_thread(QDRANT_CLIENT.delete_collection, collection_name=name)
+        collections.remove(name)  # Remove from local list
+    
     if name not in collections:
         await asyncio.to_thread(
             QDRANT_CLIENT.recreate_collection,
@@ -111,13 +262,11 @@ async def retreive_docs(doc: List[str], name: str, is_hybrid: bool= False):
         tokenized_docs = [tokenize(doc.page_content) for doc in chunked_docs]
         bm25 = await asyncio.to_thread(BM25Okapi, tokenized_docs)
         BM25_INDICES[name] = {
-    "bm25": bm25,
-    "docs": {str(i): doc.page_content for i, doc in enumerate(chunked_docs)},
-    "tokens": tokenized_docs
-}
-
+            "bm25": bm25,
+            "docs": {str(i): doc.page_content for i, doc in enumerate(chunked_docs)},
+            "tokens": tokenized_docs
+        }
         print(f"[RAG] Stored {len(chunked_docs)} chunks in {name} (Vector + BM25)")
-
     else:
         print(f"[RAG] Stored {len(chunked_docs)} chunks in {name} (Vector only)")
 def tokenize(text: str):
@@ -127,17 +276,18 @@ async def _search_collection(collection_name: str, query: str, limit: int) -> Li
     """
     Helper function to perform a semantic search on a Qdrant collection and return the text of the top results.
     """
-   
     EMBEDDING_MODEL = OpenAIEmbeddings(model="text-embedding-3-small")
-    query_embedding =await  EMBEDDING_MODEL.aembed_query(query)
+    query_embedding = await EMBEDDING_MODEL.aembed_query(query)
     
     search_results = await asyncio.to_thread(
-    QDRANT_CLIENT.search,
+        QDRANT_CLIENT.search,
         collection_name=collection_name,
         query_vector=query_embedding,
         limit=limit
     )
-    return [result.payload["text"] for result in search_results]
+    result = [result.payload["text"] for result in search_results]
+    
+    return result
 async def _reciprocal_rank_fusion(rankings: List[List[str]], k: int = 60) -> List[str]:
     """
     Reciprocal Rank Fusion (RRF) algorithm to combine multiple ranked lists.
@@ -309,7 +459,6 @@ async def intelligent_source_selection(
             "use_user_docs": bool,
             "use_kb": bool,
             "search_strategy": str,  # "user_only", "kb_only", "both", "none"
-            "reasoning": str
         }
     """
     
@@ -355,17 +504,27 @@ You **MUST** respond with a single, valid JSON object and nothing else.
     "use_user_docs": true/false,
     "use_kb": true/false,
     "search_strategy": "user_docs_only" | "kb_only" | "both" | "none",
-    "reasoning": "A brief explanation of which rule you followed and why."
+    "reasoning": "Brief explanation of decision"
 }}
-"""
-    llm=get_llm(llm_model, 0.4)
+""" 
+    llm = ChatGroq(
+        model="openai/gpt-oss-120b",  # Groq's model name for GPT OSS 20B 128k
+        temperature=0.4,
+        groq_api_key=os.getenv("GROQ_API_KEY")
+    )
     response = await llm.ainvoke([HumanMessage(content=classification_prompt)])
+
     
     try:
         import json
-        result = json.loads(response.content)
+        import re
+        content = response.content.strip()
+        if content.startswith('```json'):
+            content = re.sub(r'^```json\s*', '', content)
+        if content.endswith('```'):
+            content = re.sub(r'\s*```$', '', content)
         
-        # Validate against availability
+        result = json.loads(content)
         if not has_user_docs:
             result["use_user_docs"] = False
         if not has_kb:
@@ -384,46 +543,52 @@ You **MUST** respond with a single, valid JSON object and nothing else.
         }
 
 async def _process_user_docs(state, docs, user_query, rag):
-    await send_status_update(state, "📚 Processing user documents...", 30)
-    await retreive_docs(docs, "doc_collection", is_hybrid=rag)
+    """
+    Process user documents - ONLY vector search (embeddings pre-processed on upload)
+    """
+    session_id = state.get("session_id", "default")
+    
     await send_status_update(state, "🔍 Searching user documents...", 50)
-    if rag:
-        res = await _hybrid_search_rrf("doc_collection", user_query, limit=6, k=60)
+
+    
+    if session_id not in USER_DOC_EMBEDDING_CACHE:
+        raise Exception(f"User documents not pre-processed for session {session_id}. Please upload documents first.")
+    
+    cache_data = USER_DOC_EMBEDDING_CACHE[session_id]
+    collection_name = cache_data["collection_name"]
+    is_hybrid = cache_data["is_hybrid"]
+    if is_hybrid:
+        res = await _hybrid_search_rrf(collection_name, user_query, limit=6, k=60)
     else:
-        res = await _search_collection("doc_collection", user_query, limit=6)
-    print(f"[RAG] Retrieved {len(res)} chunks from user docs")
+        res = await _search_collection(collection_name, user_query, limit=6)
+    
     return ("user", res)
 
 async def _process_kb_docs(state, kb_docs, user_query, rag):
-    await send_status_update(state, "📖 Processing knowledge base...", 60)
-    if isinstance(kb_docs, dict) and "text" in kb_docs:
-        kb_texts = kb_docs["text"]
-    elif isinstance(kb_docs, list):
-        # Handle new structured format with metadata
-        kb_texts = []
-        for doc in kb_docs:
-            if isinstance(doc, dict) and "content" in doc:
-                # Include filename and content
-                filename = doc.get("filename", "Unknown")
-                file_type = doc.get("file_type", "")
-                content = doc["content"]
-                
-                # Format with document metadata
-                formatted_content = f"[Document: {filename} ({file_type})]\n{content}"
-                kb_texts.append(formatted_content)
-            elif hasattr(doc, "content"):
-                kb_texts.append(doc.content)
-            else:
-                kb_texts.append(str(doc))
-    else:
-        kb_texts = [str(kb_docs)]
-
-    await retreive_docs(kb_texts, "kb_collection", is_hybrid=rag)
+    """
+    Process KB documents - ONLY vector search (embeddings pre-processed on GPT load)
+    """
+    session_id = state.get("session_id", "default")
+    
     await send_status_update(state, "🔍 Searching knowledge base...", 70)
-    if rag:
-        res = await _hybrid_search_intersection("kb_collection", user_query, limit=6)
+
+    if session_id not in KB_EMBEDDING_CACHE:
+        print(f"[RAG] ERROR: KB not pre-processed for session {session_id}")
+        print(f"[RAG] Available KB cache keys: {list(KB_EMBEDDING_CACHE.keys())}")
+        raise Exception(f"KB not pre-processed for session {session_id}. Please load custom GPT first.")
+    
+    cache_data = KB_EMBEDDING_CACHE[session_id]
+    collection_name = cache_data["collection_name"]
+    is_hybrid = cache_data["is_hybrid"]
+    
+    print(f"[RAG] Using pre-processed KB embeddings from collection: {collection_name}")
+    
+
+    if is_hybrid:
+        res = await _hybrid_search_intersection(collection_name, user_query, limit=6)
     else:
-        res = await _hybrid_search_rrf("kb_collection", user_query, limit=6, k=60)
+        res = await _hybrid_search_rrf(collection_name, user_query, limit=6, k=60)
+    
     print(f"[RAG] Retrieved {len(res)} chunks from KB")
     return ("kb", res)
 
@@ -440,45 +605,80 @@ async def Rag(state: GraphState) -> GraphState:
     temperature = gpt_config.get("temperature", 0.0)
 
     print(f"[RAG] Processing query: {user_query}")
-    await send_status_update(state, "🧠 Analyzing query and selecting sources...", 10)
+    await send_status_update(state, "🧠 Analyzing query and searching sources in parallel...", 10)
     has_user_docs = bool(docs)
     has_kb = bool(kb_docs)
-    source_decision = await intelligent_source_selection(
-        user_query=user_query,
-        has_user_docs=has_user_docs,
-        has_kb=has_kb,
-        custom_prompt=custom_system_prompt,
-        llm_model=llm_model
+    parallel_tasks = []
+
+    intelligence_task = asyncio.create_task(
+        intelligent_source_selection(
+            user_query=user_query,
+            has_user_docs=has_user_docs,
+            has_kb=has_kb,
+            custom_prompt=custom_system_prompt,
+            llm_model=llm_model
+        )
     )
+    parallel_tasks.append(("intelligence", intelligence_task))
+
+    if has_user_docs and docs:
+        user_search_task = asyncio.create_task(
+            _process_user_docs(state, docs, user_query, rag)
+        )
+        parallel_tasks.append(("user_search", user_search_task))
+
+    if has_kb and kb_docs:
+        kb_search_task = asyncio.create_task(
+            _process_kb_docs(state, kb_docs, user_query, rag)
+        )
+        parallel_tasks.append(("kb_search", kb_search_task))
+
+    print(f"[RAG] Running {len(parallel_tasks)} tasks in parallel...")
+    results = await asyncio.gather(*[task for _, task in parallel_tasks], return_exceptions=True)
+
+    source_decision = None
+    user_result = []
+    kb_result = []
+    
+    for i, (task_name, _) in enumerate(parallel_tasks):
+        result = results[i]
+        if isinstance(result, Exception):
+            print(f"[RAG] Task {task_name} failed: {result}")
+            continue
+            
+        if task_name == "intelligence":
+            source_decision = result
+        elif task_name == "user_search" and isinstance(result, tuple) and len(result) == 2:
+            user_result = result[1]
+        elif task_name == "kb_search" and isinstance(result, tuple) and len(result) == 2:
+            kb_result = result[1]
+
+    if not source_decision:
+        print(f"[RAG] Intelligence failed, defaulting to all sources")
+        source_decision = {
+            "use_user_docs": has_user_docs,
+            "use_kb": has_kb,
+            "search_strategy": "both" if has_user_docs and has_kb else ("user_docs_only" if has_user_docs else "kb_only"),
+            "reasoning": "Fallback due to intelligence failure"
+        }
     
     use_user_docs = source_decision["use_user_docs"]
+    print(f"is doc usr doc..........",use_user_docs)
     use_kb = source_decision["use_kb"]
     strategy = source_decision["search_strategy"]
     
     print(f"[RAG] Using strategy: {strategy}")
     print(f"[RAG] User Docs: {use_user_docs}, KB: {use_kb}")
+
+    if not use_user_docs:
+        user_result = []
+        print(f"[RAG] Discarded user docs search (not needed)")
     
-    user_result = []
-    kb_result = []
+    if not use_kb:
+        kb_result = []
+        print(f"[RAG] Discarded KB search (not needed)")
     
-    
-    tasks = []
-
-    if use_user_docs and docs:
-        tasks.append(asyncio.create_task(_process_user_docs(state, docs, user_query, rag)))
-
-    if use_kb and kb_docs:
-        tasks.append(asyncio.create_task(_process_kb_docs(state, kb_docs, user_query, rag)))
-
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    user_result, kb_result = [], []
-    for r in results:
-        if isinstance(r, tuple) and len(r) == 2:
-            if r[0] == "user":
-                user_result = r[1]
-            elif r[0] == "kb":
-                kb_result = r[1]
+    print(f"[RAG] Parallel execution completed - using {len(user_result)} user chunks, {len(kb_result)} KB chunks")
 
     await send_status_update(state, "🔗 Combining information from sources...", 80)
     ctx = state.get("context") or {}
@@ -492,26 +692,28 @@ async def Rag(state: GraphState) -> GraphState:
         if content:
             speaker = "User" if role in ("human", "user") else "Assistant"
             last_turns.append(f"{speaker}: {content}")
-    last_3_text = "\n".join(last_turns[-3:]) or "None"
-
-    context_parts = [f"CONVERSATION CONTEXT:\nSummary: {summary if summary else 'None'}\nLast Turns:\n{last_3_text}"]
+    last_3_text = "\n".join(last_turns[-2:]) or "None"
+    context_parts=[f""]
+    
     context_parts.append(f"\nUSER QUERY:\n{user_query}")
     context_parts.append(f"\nSOURCE ROUTING DECISION:\nStrategy: {strategy}\nReasoning: {source_decision['reasoning']}")
     
-    if user_result:
+    if user_result and use_user_docs:
         context_parts.append(f"\nUSER DOCUMENT CONTEXT:\n{chr(10).join(user_result)}")
     
-    if kb_result:
+    if kb_result and use_kb:
+        print(f"kb gwdsjqfifsdgilghsdfiushleroge.................")
         context_parts.append(f"\nKNOWLEDGE BASE CONTEXT:\n{chr(10).join(kb_result)}")
     
     if not user_result and not kb_result:
         context_parts.append("\nNO RETRIEVAL CONTEXT: No relevant documents were found. Provide a helpful response based on general knowledge and conversation history.")
     elif not user_result and kb_result:
         context_parts.append("\nPARTIAL CONTEXT: Only knowledge base information is available. The user may need to upload documents for analysis.")
-
+    
+    # Always include conversation context - let the LLM decide how to use it
+    context_parts.append(f"CONVERSATION CONTEXT:\nSummary: {summary if summary else 'None'}\nLast Turns:\n{last_3_text}")
     final_context_message = HumanMessage(content="\n".join(context_parts))
-
-    # --- Use static cacheable system prefix + dynamic prompt ---
+    # print(f"system promtp................", STATIC_SYS_RAG)
     system_msg = SystemMessage(content=STATIC_SYS_RAG)
 
     dynamic_prompt = f"""
@@ -519,18 +721,48 @@ async def Rag(state: GraphState) -> GraphState:
     {custom_system_prompt if custom_system_prompt else 'No custom instructions provided.'}
 
     ---
-    # SOURCE-AWARE RESPONSE RULES
-    **Critical Instructions:**
-    - The system has intelligently selected which knowledge sources to use for this query.
-    - ONLY use the provided context sections below.
-    - If only User Document Context is provided: Focus exclusively on the user's documents.
-    - If only Knowledge Base Context is provided: Focus exclusively on standards/guidelines.
-    - If both are provided: Integrate both sources appropriately.
-    - If no retrieval context: Use general knowledge and conversation history.
-    - If only KB is available but user documents are expected: Politely explain that documents need to be uploaded for analysis.
+    # ROUTING DECISION: {strategy.upper()}
+    **CRITICAL: The system has decided to use: {strategy}**
+    - use_user_docs: {use_user_docs}
+    - use_kb: {use_kb}
+    
+    **STRICT INSTRUCTIONS:**
+    - ONLY use the context sections that match the routing decision above.
+    - DO NOT reference or use knowledge from sources that were NOT selected.
+    - If use_user_docs=True: Use ONLY user document context (ignore any KB knowledge).
+    - If use_kb=True: Use ONLY knowledge base context (ignore any user documents).
+    - If both=True: Integrate both sources appropriately.
+    - If neither=True: Use general knowledge and conversation history only.
+
+    **INTELLIGENT CONTEXT USAGE:**
+    Analyze the user query to determine how to use the conversation context:
+
+    **For NEW DOCUMENT ANALYSIS:**
+    - If the user is asking to "summarize", "analyze", "review", "check", or "examine" a document
+    - AND this appears to be a new document upload (not a follow-up)
+    - THEN: Focus ONLY on the current document content
+    - IGNORE conversation summary and previous context to avoid cross-checking with KB
+    - Provide a pure, clean analysis of just the current document
+
+    **For FOLLOW-UP QUERIES:**
+    - If the user is asking for "more details", "tell me more", "what else", "explain further"
+    - OR using pronouns like "it", "this", "that", "him", "her", "they"
+    - OR asking continuation questions like "and", "also", "additionally"
+    - THEN: Use conversation summary and recent messages to provide context
+    - Build upon previous information appropriately
+
+    **For STANDARD QUERIES:**
+    - If the query is self-contained and doesn't reference previous context
+    - THEN: Use minimal conversation context, focus on the current query
+    - Only reference previous conversation if directly relevant
+
+    **Context Usage Guidelines:**
+    - NEW DOCUMENT: "This is a new document analysis - focus only on the current document content"
+    - FOLLOW-UP: "This is a follow-up question - use conversation context to provide continuity"
+    - STANDARD: "This is a standard query - use conversation context only if directly relevant"
 
     **Output Formatting:**
-    - For summaries: Use clear paragraphs with key points highlighted.
+    - For summaries: Use clear paragraphs with key points highlighted. Give detailed summary only.
     - For searches: Present findings with specific references.
     - For comparisons: Use structured comparison format (tables if useful).
     - For analysis: Provide detailed breakdown with clear sections.

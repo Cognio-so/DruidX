@@ -141,6 +141,24 @@ async def set_gpt_config(session_id: str, gpt_config: dict):
     session = SessionManager.get_session(session_id)
     session["gpt_config"] = gpt_config
     print(f"gpt config..........." , gpt_config)
+    
+    # Pre-process KB if available
+    if session.get("kb"):
+        try:
+            from Rag.Rag import preprocess_kb_documents
+            hybrid_rag = gpt_config.get("hybridRag", False)
+            print(f"[MAIN] Pre-processing KB with {len(session['kb'])} documents for session {session_id}")
+            await preprocess_kb_documents(
+                session["kb"], 
+                session_id, 
+                is_hybrid=hybrid_rag
+            )
+            print(f"✅ [MAIN] Pre-processed KB documents with embeddings")
+        except Exception as e:
+            print(f"⚠️ [MAIN] Warning: Failed to pre-process KB documents: {e}")
+            import traceback
+            traceback.print_exc()
+    
     SessionManager.update_session(session_id, session)
     return {"message": "GPT configuration updated", "gpt_config": gpt_config}
 
@@ -220,12 +238,52 @@ async def add_documents_by_url(session_id: str, request: dict):
     
     # Add to session
     if doc_type == "user":
-        session["uploaded_docs"].extend(processed_docs)
+        # REPLACE old documents instead of extending
+        session["uploaded_docs"] = processed_docs
         session["new_uploaded_docs"] = processed_docs
-        print(f"Added {len(processed_docs)} documents to uploaded_docs")
+        print(f"Replaced uploaded_docs with {len(processed_docs)} documents")
+        
+        # Pre-process embeddings immediately after upload
+        try:
+            from Rag.Rag import preprocess_user_documents, clear_user_doc_cache
+            
+            # Clear old embeddings first
+            clear_user_doc_cache(session_id)
+            print(f"[MAIN] Cleared old user document cache for session {session_id}")
+            
+            # Process only NEW documents
+            hybrid_rag = session.get("gpt_config", {}).get("hybridRag", False)
+            await preprocess_user_documents(
+                processed_docs, 
+                session_id, 
+                is_hybrid=hybrid_rag,
+                is_new_upload=True  # Clear and replace
+            )
+            print(f"✅ [MAIN] Pre-processed {len(processed_docs)} user documents with embeddings")
+        except Exception as e:
+            print(f"⚠️ [MAIN] Warning: Failed to pre-process user documents: {e}")
+            import traceback
+            traceback.print_exc()
+            
     elif doc_type == "kb":
         session["kb"].extend(processed_docs)
         print(f"Added {len(processed_docs)} documents to kb")
+        
+        # Pre-process KB embeddings immediately after upload
+        try:
+            from Rag.Rag import preprocess_kb_documents
+            hybrid_rag = session.get("gpt_config", {}).get("hybridRag", False)
+            print(f"[MAIN] Pre-processing KB with {len(session['kb'])} documents for session {session_id}")
+            await preprocess_kb_documents(
+                session["kb"], 
+                session_id, 
+                is_hybrid=hybrid_rag
+            )
+            print(f"✅ [MAIN] Pre-processed KB documents with embeddings")
+        except Exception as e:
+            print(f"⚠️ [MAIN] Warning: Failed to pre-process KB documents: {e}")
+            import traceback
+            traceback.print_exc()
     
     SessionManager.update_session(session_id, session)
     
@@ -348,6 +406,7 @@ async def stream_chat(session_id: str, request: ChatRequest):
             deep_search=request.deep_search,  
             uploaded_doc=request.uploaded_doc,
             last_route=session.get("last_route"), 
+            session_id=session_id,  # Add session_id to state
             context={  # Add this
         "session": {
             "summary": session.get("summary", ""),

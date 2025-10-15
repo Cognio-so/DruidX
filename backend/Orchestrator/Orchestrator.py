@@ -5,6 +5,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 import os
 import json
+import asyncio
 from typing import List
 from langchain_google_genai import ChatGoogleGenerativeAI
 import os
@@ -180,16 +181,15 @@ async def analyze_query(
     recent_messages_text: str,
     session_summary: str,
     last_route: str | None,
-    active_docs_present: bool,
 ) -> Optional[Dict[str, Any]]:
     """
     Analyze the user's message in context (conversation, summary, last route)
     to decide the next node (RAG, WebSearch, SimpleLLM, Image).
 
     Rules enforced:
-    - Only `active_docs_present` determines RAG possibility.
-    - WebSearch and Image detection are purely query-driven.
-    - No toggles, KB, or doc presence influence routing.
+    - Routing based purely on query content, conversation context, and last route
+    - No active_docs dependency - analyze based on query patterns and follow-up detection
+    - WebSearch and Image detection are purely query-driven
     """
 
     try:
@@ -199,13 +199,7 @@ async def analyze_query(
             .replace("{recent_messages}", recent_messages_text or "(none)")
             .replace("{session_summary}", session_summary or "(none)")
             .replace("{last_route}", str(last_route or "None"))
-            .replace("{active_docs_present}", str(bool(active_docs_present)).lower())
         )
-        print(f"recent_messages_text..............", recent_messages_text)
-        print(f"session_summary..............", session_summary)
-        print(f"[Analyzer] Model: {llm}")
-        print(f" lastt- rout_______________-----", last_route)
-        # --- Build static + dynamic messages for caching ---
         system_msg = SystemMessage(content=STATIC_SYS)
         # print(f"--------------system_prompt----------", system_msg)
         # Create dynamic text separately (NOT part of system prompt)
@@ -217,7 +211,6 @@ async def analyze_query(
         {recent_messages_text[:300] or '(none)'}
 
         Last Route: {last_route or 'None'}
-        Active Docs Present: {bool(active_docs_present)}
         """
 
         messages = [system_msg, HumanMessage(content=dynamic_context)]
@@ -255,7 +248,6 @@ def _get_last_output(state: GraphState) -> dict | None:
 
 
 async def rewrite_query(state: GraphState) -> str:
-    # === Prompt caching setup for Query Rewriter ===
     REWRITE_CORE_PREFIX = """
 You are a query rewriting expert inside an AI Orchestrator.
 Your job is to take the user goal, current plan step, and limited context,
@@ -275,12 +267,6 @@ Follow these permanent rules:
     idx = state.get("task_index", 0)
     intermediate_results = state.get("intermediate_results", [])
 
-    print("\n========== [REWRITE QUERY DEBUG] ==========")
-    print(f"🧩 Current Task: {current_task}")
-    print(f"🧠 User Query: {user_query}")
-    print(f"📋 Full Plan: {plan}")
-    print(f"🔢 Task Index: {idx}")
-    print(f"📚 Intermediate Results Count: {len(intermediate_results)}")
 
    
     is_first_node = (idx == 0 or not intermediate_results)
@@ -296,12 +282,15 @@ Follow these permanent rules:
             last_msgs.append(f"{speaker}: {content}")
         recent_text = "\n".join(last_msgs)
 
+        # ADD THE USER QUERY TO CONTEXT
         context_text = (
+            f"Current User Goal: {user_query}\n\n"
             f"Summary:\n{summary[:300]}\n\nRecent Conversation:\n{recent_text[:300]}"
-            if summary or recent_text else "No previous conversation available."
+            if summary or recent_text else f"Current User Query: {user_query}\n\nNo previous conversation available."
         )
         print(f"🧾 Using Summary (first 200 chars): {summary[:200]}...")
         print(f"💬 Using Last 2 Messages:\n{recent_text or '(none)'}")
+        print(f"🎯 Current User Query: {user_query}")
 
     else:
         
@@ -432,18 +421,19 @@ async def orchestrator(state: GraphState) -> GraphState:
         last_route = sess.get("last_route")
         session_summary = sess.get("summary", "")
         recent_messages_text = _format_last_turns_for_prompt(messages, k=2)
-        active_docs_present = bool(state.get("active_docs"))
         
-
-        result = await analyze_query(
-    user_message=user_query,
-    prompt_template=prompt_template,
-    llm=llm_model,
-    recent_messages_text=recent_messages_text,
-    session_summary=session_summary,
-    last_route=last_route,
-    active_docs_present=active_docs_present,
-)
+        analyze_task = analyze_query(
+            user_message=user_query,
+            prompt_template=prompt_template,
+            llm=llm_model,
+            recent_messages_text=recent_messages_text,
+            session_summary=session_summary,
+            last_route=last_route,
+        )
+        
+        tentative_rewrite_task = rewrite_query(state)
+        
+        result, tentative_rewrite = await asyncio.gather(analyze_task, tentative_rewrite_task)
 
 
 
@@ -478,10 +468,11 @@ async def orchestrator(state: GraphState) -> GraphState:
         route =normalize_route(plan[0]) 
         
                 
-        if len(plan)==1:
+        if len(plan)==1 and plan[0]=="rag":
                 state["resolved_query"] = user_query
         else:
-               state["resolved_query"]=await rewrite_query(state)
+               # Use the tentative rewrite from parallel execution
+               state["resolved_query"] = tentative_rewrite
        
         state["route"] = route
         ctx = state.get("context") or {}

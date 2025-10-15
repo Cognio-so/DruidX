@@ -478,7 +478,7 @@ async def orchestrator(state: GraphState) -> GraphState:
         route =normalize_route(plan[0]) 
         
                 
-        if len(plan)==1:
+        if len(plan)==1 and plan[0]=="rag":
                 state["resolved_query"] = user_query
         else:
                state["resolved_query"]=await rewrite_query(state)

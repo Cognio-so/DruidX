@@ -78,7 +78,7 @@ async def send_status_update(state: GraphState, message: str, progress: int = No
                 "progress": progress
             }
         })
-async def retreive_docs(doc: List[str], name: str, is_hybrid: bool= False):
+async def retreive_docs(doc: List[str], name: str, is_hybrid: bool = False, clear_existing: bool = False):
     EMBEDDING_MODEL = OpenAIEmbeddings(model="text-embedding-3-small")
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
     chunked_docs = text_splitter.create_documents(doc)
@@ -88,6 +88,13 @@ async def retreive_docs(doc: List[str], name: str, is_hybrid: bool= False):
     # Instead of always recreating
     collections_response = await asyncio.to_thread(QDRANT_CLIENT.get_collections)
     collections = [c.name for c in collections_response.collections]
+    
+    # NEW: Clear existing collection if requested
+    if clear_existing and name in collections:
+        print(f"[RAG] Clearing existing collection: {name}")
+        await asyncio.to_thread(QDRANT_CLIENT.delete_collection, collection_name=name)
+        collections.remove(name)  # Remove from local list
+    
     if name not in collections:
         await asyncio.to_thread(
             QDRANT_CLIENT.recreate_collection,
@@ -111,13 +118,11 @@ async def retreive_docs(doc: List[str], name: str, is_hybrid: bool= False):
         tokenized_docs = [tokenize(doc.page_content) for doc in chunked_docs]
         bm25 = await asyncio.to_thread(BM25Okapi, tokenized_docs)
         BM25_INDICES[name] = {
-    "bm25": bm25,
-    "docs": {str(i): doc.page_content for i, doc in enumerate(chunked_docs)},
-    "tokens": tokenized_docs
-}
-
+            "bm25": bm25,
+            "docs": {str(i): doc.page_content for i, doc in enumerate(chunked_docs)},
+            "tokens": tokenized_docs
+        }
         print(f"[RAG] Stored {len(chunked_docs)} chunks in {name} (Vector + BM25)")
-
     else:
         print(f"[RAG] Stored {len(chunked_docs)} chunks in {name} (Vector only)")
 def tokenize(text: str):
@@ -385,13 +390,17 @@ You **MUST** respond with a single, valid JSON object and nothing else.
 
 async def _process_user_docs(state, docs, user_query, rag):
     await send_status_update(state, "📚 Processing user documents...", 30)
-    await retreive_docs(docs, "doc_collection", is_hybrid=rag)
+    
+    # NEW: Check if this is a new document upload and clear existing collection
+    is_new_doc = state.get("uploaded_doc", False)
+    await retreive_docs(docs, "doc_collection", is_hybrid=rag, clear_existing=is_new_doc)
+    
     await send_status_update(state, "🔍 Searching user documents...", 50)
     if rag:
         res = await _hybrid_search_rrf("doc_collection", user_query, limit=6, k=60)
     else:
         res = await _search_collection("doc_collection", user_query, limit=6)
-    print(f"[RAG] Retrieved {len(res)} chunks from user docs")
+
     return ("user", res)
 
 async def _process_kb_docs(state, kb_docs, user_query, rag):
@@ -492,9 +501,9 @@ async def Rag(state: GraphState) -> GraphState:
         if content:
             speaker = "User" if role in ("human", "user") else "Assistant"
             last_turns.append(f"{speaker}: {content}")
-    last_3_text = "\n".join(last_turns[-3:]) or "None"
-
-    context_parts = [f"CONVERSATION CONTEXT:\nSummary: {summary if summary else 'None'}\nLast Turns:\n{last_3_text}"]
+    last_3_text = "\n".join(last_turns[-2:]) or "None"
+    context_parts=[f""]
+    
     context_parts.append(f"\nUSER QUERY:\n{user_query}")
     context_parts.append(f"\nSOURCE ROUTING DECISION:\nStrategy: {strategy}\nReasoning: {source_decision['reasoning']}")
     
@@ -508,7 +517,7 @@ async def Rag(state: GraphState) -> GraphState:
         context_parts.append("\nNO RETRIEVAL CONTEXT: No relevant documents were found. Provide a helpful response based on general knowledge and conversation history.")
     elif not user_result and kb_result:
         context_parts.append("\nPARTIAL CONTEXT: Only knowledge base information is available. The user may need to upload documents for analysis.")
-
+    context_parts.append(f"CONVERSATION CONTEXT:\nSummary: {summary if summary else 'None'}\nLast Turns:\n{last_3_text}")
     final_context_message = HumanMessage(content="\n".join(context_parts))
 
     # --- Use static cacheable system prefix + dynamic prompt ---

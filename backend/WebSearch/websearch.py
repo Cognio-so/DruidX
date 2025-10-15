@@ -9,7 +9,6 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 load_dotenv()
-from langchain_groq import ChatGroq
 google_api_key=os.getenv("GOOGLE_API_KEY", "")
 _tavily: Optional[AsyncTavilyClient] = None
 from prompt_cache import normalize_prefix
@@ -181,11 +180,11 @@ Now synthesize them into a clear, structured answer with:
     print(f"[WebSearch] Chunk callback type: {type(chunk_callback)}")
     full_response = ""
     if not is_web_search:
-        llm = ChatGroq(
-        model="openai/gpt-oss-120b",  # Groq's model name for GPT OSS 20B 128k
-        temperature=0.4,
-        groq_api_key=os.getenv("GROQ_API_KEY")
-    )
+        llm=ChatGoogleGenerativeAI(
+                model="gemini-2.5-flash-lite",
+                temperature=0.3,
+                google_api_key=google_api_key,
+            )
         system_msg = SystemMessage(content=STATIC_SYS_WEBSEARCH_BASIC)
         human_msg = HumanMessage(content=user_prompt)
 

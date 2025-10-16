@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 import os
 google_api_key=os.getenv("GOOGLE_API_KEY", "")
-llm1 = get_reasoning_llm()
+
 
 async def synthesize_report_node(state: GraphState) -> GraphState:
     """
@@ -17,7 +17,7 @@ async def synthesize_report_node(state: GraphState) -> GraphState:
     Streams final output but doesn't store in state to save tokens
     """
     research_state_dict = state["deep_research_state"]
-    llm_model = state.get("llm_model", "gpt-4o")
+    llm_model = state.get("deep_research_llm_model")
     
     chunk_callback = state.get("_chunk_callback")
     
@@ -92,12 +92,12 @@ async def synthesize_report_node(state: GraphState) -> GraphState:
     )
 
     # Stream the LLM response
-    llm2 = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-lite",
-        temperature=0.3,
-        google_api_key=google_api_key,
-    )
-    
+    # llm2 = ChatGoogleGenerativeAI(
+    #     model="gemini-2.5-flash-lite",
+    #     temperature=0.3,
+    #     google_api_key=google_api_key,
+    # )
+    llm2=get_reasoning_llm(llm_model)
     async for chunk in llm2.astream([HumanMessage(content=synthesis_prompt)]):
         if hasattr(chunk, 'content') and chunk.content:
             if chunk_callback:

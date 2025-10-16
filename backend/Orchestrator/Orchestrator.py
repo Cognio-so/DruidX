@@ -379,8 +379,6 @@ async def orchestrator(state: GraphState) -> GraphState:
     ctx = state.get("context") or {}
     session_meta = ctx.get("session") or {}
     last_route = session_meta.get("last_route")
-    # clean_query = await rewrite_query(state)
-    # state["resolved_query"] = clean_query
     new_Doc=state.get("new_uploaded_docs", [])
     if not state.get("active_docs"):
         state["active_docs"] = None
@@ -440,28 +438,24 @@ async def orchestrator(state: GraphState) -> GraphState:
     
      
     if not state.get("tasks"):
-        if state.get("deep_search", False):
-            print("[Orchestrator] Deep search toggle is ON → forcing deepResearch route")
-            plan = ["deepResearch"]
-            state["resolved_query"] = user_query   # keep raw query
-        else:
-            plan = result.get("execution_order", []) if result else ["SimpleLLM"]
-            if uploaded_doc:
-                print(f"hi......................")
-                if len(plan) == 1 and plan[0].lower() == "rag":
-                    pass  
-                elif len(plan) == 1 and plan[0].lower() != "rag":
-                    plan = ["rag"]
-                elif len(plan) == 0:
-                    plan = ["rag"]
-                else:
-                    pass
+        # Deep search is now handled by separate endpoint, not through orchestrator
+        plan = result.get("execution_order", []) if result else ["SimpleLLM"]
+        if uploaded_doc:
+            print(f"hi......................")
+            if len(plan) == 1 and plan[0].lower() == "rag":
+                pass  
+            elif len(plan) == 1 and plan[0].lower() != "rag":
+                plan = ["rag"]
+            elif len(plan) == 0:
+                plan = ["rag"]
+            else:
+                pass
 
-                print(f"[Orchestrator] New doc uploaded → updated plan = {plan}")
+            print(f"[Orchestrator] New doc uploaded → updated plan = {plan}")
 
-            
-            if not plan:
-                plan = ["SimpleLLM"]
+        
+        if not plan:
+            plan = ["SimpleLLM"]
         state["tasks"] = plan
         state["task_index"] = 0 
         state["current_task"] = plan[0]

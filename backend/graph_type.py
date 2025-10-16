@@ -11,7 +11,7 @@ class GraphState(TypedDict, total=False):
     new_uploaded_docs: Optional[List[str]]  # New field for recently uploaded documents
     deep_search: Optional[bool]
     mcp: Optional[bool]
-    mcp_schema: Optional[List[Dict[str, Any]]]
+    mcp_schema: Optional[Dict[str, Any]]
     mcp_tools:Optional[List[Any]]
     web_search: Optional[bool]
     rag: Optional[bool]  # hybrid rag only
@@ -33,4 +33,5 @@ class GraphState(TypedDict, total=False):
     _chunk_callback: Optional[Callable] 
     deep_research_state: Optional[Dict[str, Any]]  
     deep_research_query: Optional[str]
+    deep_research_llm_model: Optional[str]  # Separate LLM model for deep research
     img_urls: Optional[List[str]]  # Add this line for image URLs

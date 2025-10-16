@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
@@ -41,10 +42,10 @@ async def run_mcp_stdio(state: "GraphState") -> "GraphState":
     """Run the specific MCP tool matching current_task using resolved query, and store intermediate result."""
     current_task = state.get("current_task", "")
     query = state.get("resolved_query") or state.get("user_query") or ""
-    schemas = state.get("mcp_schema") or []
+    mcp_schema = state.get("mcp_schema") or {}
     result_blocks = []
 
-    if not schemas:
+    if not mcp_schema:
         state["response"] = "❌ No MCP schemas provided."
         return state
 
@@ -57,11 +58,26 @@ async def run_mcp_stdio(state: "GraphState") -> "GraphState":
         return state
 
     selected_schema = None
-    for s in schemas:
-        name = (s.get("name") or s.get("tool_name") or s.get("command") or "").lower()
-        if name == current_tool:
-            selected_schema = s
-            break
+    
+    # Check if mcp_schema is in nested format (mcpServers object)
+    if isinstance(mcp_schema, dict) and "mcpServers" in mcp_schema:
+        mcp_servers = mcp_schema.get("mcpServers", {})
+        if current_tool in mcp_servers:
+            selected_schema = mcp_servers[current_tool]
+        else:
+            state["response"] = f"⚠️ MCP tool '{current_tool}' not found in mcpServers. Available tools: {list(mcp_servers.keys())}"
+            return state
+    # Fallback to legacy list format for backward compatibility
+    elif isinstance(mcp_schema, list):
+        schemas = mcp_schema
+        for s in schemas:
+            name = (s.get("name") or s.get("tool_name") or s.get("command") or "").lower()
+            if name == current_tool:
+                selected_schema = s
+                break
+    else:
+        state["response"] = "❌ Invalid MCP schema format. Expected object with 'mcpServers' key or list of schemas."
+        return state
 
     if not selected_schema:
         state["response"] = f"⚠️ MCP schema not found for tool '{current_tool}'."
@@ -85,7 +101,7 @@ async def run_mcp_stdio(state: "GraphState") -> "GraphState":
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            env={**env, **{**env}},
+            env={**os.environ, **env},
         )
 
         init_req = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}

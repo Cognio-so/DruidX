@@ -1,8 +1,6 @@
-from typing import Literal
-from langgraph.types import interrupt, Command
 from graph_type import GraphState
 
-async def human_approval_node(state: GraphState) -> Command[Literal["execute_research", "plan_research"]]:
+async def human_approval_node(state: GraphState) -> GraphState:
     """
     Human approval node for Deep Research planning phase
     Shows the research plan to user and waits for approval/rejection
@@ -42,7 +40,7 @@ async def human_approval_node(state: GraphState) -> Command[Literal["execute_res
         print("✅ APPROVED! Proceeding to research execution...")
         if chunk_callback:
             await chunk_callback("✅ **Approved! Proceeding to research execution...**\n\n")
-        return Command(goto="execute_research")
+        state["route"] = "execute_research"
     else:
         user_feedback = input("\nYour feedback: ").strip()
         
@@ -70,4 +68,6 @@ async def human_approval_node(state: GraphState) -> Command[Literal["execute_res
             if chunk_callback:
                 await chunk_callback("❌ **Rejected! No feedback provided. Regenerating plan...**\n\n")
         
-        return Command(goto="plan_research")
+        state["route"] = "plan_research"
+    
+    return state

@@ -12,11 +12,7 @@ import httpx
 from document_processor import extract_text_from_pdf, extract_text_from_docx, extract_text_from_txt, extract_text_from_json
 from graph import graph
 from graph_type import GraphState
-# Remove this import
-# from streaming_graph import StreamingGraph
-
-# Remove this line
-# streaming_graph = StreamingGraph()
+from DeepResearch.deepresearch_graph import deep_research_graph
 
 from models import (
     ChatMessage, ChatRequest, ChatResponse, 
@@ -24,7 +20,6 @@ from models import (
     SessionInfo, DocumentInfo
 )
 
-# Load environment variables
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -37,7 +32,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000","https://emsa-gpt.vercel.app" ],
@@ -46,12 +40,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory storage for sessions
 sessions: Dict[str, Dict[str, Any]] = {}
 
-# Initialize streaming graph
-# Remove this line
-# streaming_graph = StreamingGraph()
 
 class SessionManager:
     @staticmethod
@@ -312,9 +302,7 @@ async def stream_chat(session_id: str, request: ChatRequest):
     print(f"Uploaded doc: {request.uploaded_doc}")
     
     session = SessionManager.get_session(session_id)
-    print(f"Previous last_route in session: {session.get('last_route')}")  # <--- ADD THIS LINE
-    
-    # Add user message to session
+    print(f"Previous last_route in session: {session.get('last_route')}")  
     session["messages"].append({"role": "user", "content": request.message})
     print(f"Added user message to session. Total messages: {len(session['messages'])}")
     
@@ -338,6 +326,7 @@ async def stream_chat(session_id: str, request: ChatRequest):
     print(f"Web Browser: {gpt_config.get('webBrowser', False)}")
     print(f"Hybrid RAG: {gpt_config.get('hybridRag', False)}")
     print(f"MCP: {gpt_config.get('mcp', False)}")
+    print(f"MCP Schema: {gpt_config.get('mcpSchema', 'None')}")
     print(f"Instruction: {gpt_config.get('instruction', '')[:100]}...")
     
     try:
@@ -405,9 +394,11 @@ async def stream_chat(session_id: str, request: ChatRequest):
             rag=request.rag, 
             deep_search=request.deep_search,  
             uploaded_doc=request.uploaded_doc,
+            mcp=gpt_config.get("mcp", False),
+            mcp_schema=gpt_config.get("mcpSchema"),
             last_route=session.get("last_route"), 
-            session_id=session_id,  # Add session_id to state
-            context={  # Add this
+            session_id=session_id,  
+            context={  
         "session": {
             "summary": session.get("summary", ""),
             "last_route": session.get("last_route")
@@ -415,19 +406,6 @@ async def stream_chat(session_id: str, request: ChatRequest):
     }, # <--- ADD THIS LINE
             _chunk_callback=chunk_callback  # Add this line
         )
-        
-        print(f"=== GRAPH STATE CREATED ===")
-        print(f"State keys: {list(state.keys())}")
-        print(f"Chunk callback set: {state.get('_chunk_callback') is not None}")
-        print(f"User query: {state.get('user_query', '')}")
-        print(f"LLM model: {state.get('llm_model', '')}")
-        print(f"Messages count: {len(state.get('messages', []))}")
-        print(f"Doc count: {len(state.get('doc', []))}")
-        print(f"KB: {bool(state.get('kb'))}")
-        print(f"Web search: {state.get('web_search', False)}")
-        print(f"RAG: {state.get('rag', False)}")
-        print(f"Deep search: {state.get('deep_search', False)}")
-        print(f"Last route: {state.get('last_route')}")  # <--- ADD THIS LINE
         
         async def generate_stream():
             try:
@@ -550,6 +528,216 @@ async def stream_chat(session_id: str, request: ChatRequest):
         )
     except Exception as e:
         print(f"=== ERROR IN STREAM_CHAT ===")
+        print(f"Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/sessions/{session_id}/deepresearch/stream")
+async def stream_deep_research(session_id: str, request: ChatRequest):
+    """Stream deep research response - bypasses orchestrator and goes directly to deep research nodes"""
+    print("=== DEEP RESEARCH STREAMING ENDPOINT CALLED ===")
+    print(f"Session ID: {session_id}")
+    print(f"Request message: {request.message}")
+    
+    session = SessionManager.get_session(session_id)
+    print(f"Previous last_route in session: {session.get('last_route')}")  
+    session["messages"].append({"role": "user", "content": request.message})
+    print(f"Added user message to session. Total messages: {len(session['messages'])}")
+
+    gpt_config = session.get("gpt_config")
+    if not gpt_config:
+        gpt_config = {
+            "model": "gpt-4o-mini",
+            "deepResearchModel": "alibaba/tongyi-deepresearch-30b-a3b:free",  
+            "webBrowser": False,
+            "hybridRag": False,
+            "mcp": False,
+            "instruction": "You are a helpful AI assistant."
+        }
+        session["gpt_config"] = gpt_config
+        SessionManager.update_session(session_id, session)
+    
+    llm_model = gpt_config.get("model", "gpt-4o-mini")
+    deep_research_model = gpt_config.get("deepResearchModel", "alibaba/tongyi-deepresearch-30b-a3b:free")  # Use separate model for deep research
+    print(f"=== GPT CONFIG ===")
+    print(f"Model: {llm_model}")
+    print(f"Deep Research Model: {deep_research_model}")
+    print(f"Web Browser: {gpt_config.get('webBrowser', False)}")
+    print(f"Hybrid RAG: {gpt_config.get('hybridRag', False)}")
+    print(f"MCP: {gpt_config.get('mcp', False)}")
+    print(f"MCP Schema: {gpt_config.get('mcpSchema', 'None')}")
+    print(f"Instruction: {gpt_config.get('instruction', '')[:100]}...")
+    
+    try:
+        uploaded_docs_content = []
+        if session.get("uploaded_docs"):
+            for doc in session["uploaded_docs"]:
+                if isinstance(doc, dict) and doc.get("content"):
+                    uploaded_docs_content.append(doc["content"])
+        
+        kb_docs_structured = []
+        if session.get("kb"):
+            for doc in session["kb"]:
+                if isinstance(doc, dict) and doc.get("content"):
+                    kb_docs_structured.append({
+                        "id": doc.get("id"),
+                        "filename": doc.get("filename"),
+                        "content": doc["content"],
+                        "file_type": doc.get("file_type"),
+                        "size": doc.get("size")
+                    })
+        new_uploaded_docs_content = []
+        if session.get("new_uploaded_docs"):
+            for doc in session.get("new_uploaded_docs"):
+                if isinstance(doc, dict) and doc.get("content"):
+                    new_uploaded_docs_content.append(doc["content"])
+    
+        queue = asyncio.Queue()
+        full_response = ""
+        
+        async def chunk_callback(chunk_content: str):
+            nonlocal full_response
+            full_response += chunk_content
+            
+          
+            await asyncio.sleep(0.05) 
+            
+            await queue.put({
+                "type": "content",
+                "data": {
+                    "content": chunk_content,
+                    "full_response": full_response,
+                    "is_complete": False
+                }
+            })
+        state = GraphState(
+            user_query=request.message,
+            deep_research_query=request.message,  
+            llm_model=llm_model,
+            deep_research_llm_model=deep_research_model,  
+            messages=session["messages"],
+            doc=uploaded_docs_content,
+            new_uploaded_docs=new_uploaded_docs_content,
+            gpt_config=gpt_config,
+            kb=kb_docs_structured,
+            web_search=request.web_search,  
+            rag=request.rag, 
+            deep_search=True,  
+            uploaded_doc=request.uploaded_doc,
+            mcp=gpt_config.get("mcp", False),
+            mcp_schema=gpt_config.get("mcpSchema"),
+            last_route=session.get("last_route"), 
+            session_id=session_id,  
+            context={  
+                "session": {
+                    "summary": session.get("summary", ""),
+                    "last_route": session.get("last_route")
+                }
+            },
+            _chunk_callback=chunk_callback 
+        )
+        
+        async def generate_stream():
+            try:
+                print("=== STARTING DEEP RESEARCH GRAPH STREAMING ===")
+                final_state = None
+                
+                async def run_deep_research_graph():
+                    nonlocal final_state
+                    try:
+                        print("🔥 STARTING DEEP RESEARCH GRAPH EXECUTION")
+                        async for node_result in deep_research_graph.astream(state):
+                            print(f"🔥 DEEP RESEARCH NODE RESULT: {list(node_result.keys())}")
+                            final_state = node_result
+                    except Exception as e:
+                        print(f"--- ERROR in deep research graph execution: {e}")
+                        await queue.put({
+                            "type": "error",
+                            "data": {"error": str(e)}
+                        })
+                    finally:
+                        print("🔥 DEEP RESEARCH GRAPH EXECUTION COMPLETED")
+                        await queue.put(None)  
+                
+                async def consume_and_yield():
+                    while True:
+                        item = await queue.get()
+                        if item is None:
+                            break
+                        if item.get("type") == "error":
+                            raise Exception(item["data"]["error"])
+                        
+                        yield item
+                
+                graph_task = asyncio.create_task(run_deep_research_graph())
+                async for chunk in consume_and_yield():
+                    chunk_data = json.dumps(chunk)
+                    yield f"data: {chunk_data}\n\n"
+                
+                await graph_task
+                
+                if final_state:
+                    for node_name, node_state in final_state.items():
+                        if isinstance(node_state, dict) and 'img_urls' in node_state:
+                            state.update(node_state)
+                            break
+    
+                final_chunk = {
+                    "type": "content",
+                    "data": {
+                        "content": "",
+                        "is_complete": True,
+                        "full_response": full_response,
+                        "img_urls": state.get("img_urls", [])
+                    }
+                }
+                
+                print(f"🔥 Final deep research chunk img_urls: {final_chunk['data']['img_urls']}")
+                yield f"data: {json.dumps(final_chunk)}\n\n"
+                
+                if full_response:
+                    session["messages"].append({"role": "assistant", "content": full_response})
+                    if state.get("img_urls"):
+                        session["img_urls"] = state.get("img_urls", [])
+                    
+                    SessionManager.update_session(session_id, session)
+                if state.get("context", {}).get("session", {}).get("summary"):
+                    session["summary"] = state["context"]["session"]["summary"]
+
+                if state.get("context", {}).get("session", {}).get("last_route"):
+                    session["last_route"] = state["context"]["session"]["last_route"]
+                if state.get("context", {}).get("session"):
+                    SessionManager.update_session(session_id, session)
+                if state.get("route"):
+                    session["last_route"] = state["route"]
+                    SessionManager.update_session(session_id, session)
+                
+                yield f"data: {json.dumps({'type': 'done', 'data': {'session_id': session_id}})}\n\n"
+                
+            except Exception as e:
+                print(f"=== ERROR IN DEEP RESEARCH STREAM GENERATION ===")
+                print(f"Error: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                error_chunk = json.dumps({
+                    "type": "error",
+                    "data": {"error": str(e)}
+                })
+                yield f"data: {error_chunk}\n\n"
+        
+        return StreamingResponse(
+            generate_stream(),
+            media_type="text/event-stream", 
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*",
+            }
+        )
+    except Exception as e:
+        print(f"=== ERROR IN STREAM_DEEP_RESEARCH ===")
         print(f"Error: {str(e)}")
         import traceback
         traceback.print_exc()

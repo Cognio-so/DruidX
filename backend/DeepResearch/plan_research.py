@@ -5,11 +5,11 @@ from llm import get_reasoning_llm, get_llm
 from DeepResearch.prompt_loader import PROMPTS
 import asyncio
 
-llm1 = get_reasoning_llm()
+
 
 async def plan_research_node(state: GraphState) -> GraphState:
     query = state["deep_research_query"]
-    llm_model = state.get("llm_model", "gpt-4o")
+    llm_model = state.get("deep_research_llm_model")
     research_state_dict = state["deep_research_state"]
     chunk_callback = state.get("_chunk_callback")
 
@@ -61,6 +61,7 @@ You are an expert research planner. Your task is to REFINE an existing research 
         
         refinement_prompt += """
 **Instructions:**
+- **No query size should be more than 300 words**.
 - Follow the user feedback EXACTLY - do not interpret or add anything extra
 - If user asks for specific number of questions, generate EXACTLY that number - no more, no less
 - If user asks to "keep only top X" or "select best X", choose the best X questions from the previous plan and keep them as they are
@@ -94,8 +95,8 @@ Generate a research plan that follows the user feedback exactly.
     generating_msg = "🤔 **Generating research plan...**\n\n"
     if chunk_callback:
         await chunk_callback(generating_msg)
-
-    llm2 = get_llm(llm_model, 0.01)
+    print(f"llm..................", llm_model)
+    llm2 = get_reasoning_llm(llm_model)
     response_text = ""
     async for chunk in llm2.astream([HumanMessage(content=planning_prompt)]):
         if hasattr(chunk, "content") and chunk.content:

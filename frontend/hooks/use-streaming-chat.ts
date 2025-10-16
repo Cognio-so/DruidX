@@ -72,7 +72,10 @@ export function useStreamingChat(sessionId: string): StreamingChatHook {
         ...request,
       };
 
-      const response = await fetch(`/api/chat/stream`, {
+      // Route to appropriate endpoint based on deep_search flag
+      const endpoint = request.deep_search ? '/api/deepresearch/stream' : '/api/chat/stream';
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

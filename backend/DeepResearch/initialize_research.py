@@ -7,12 +7,12 @@ async def initialize_deep_research(state: GraphState) -> GraphState:
     Initialize deep research state and prepare for planning
     """
     query = state.get("resolved_query") or state.get("user_query", "")
-    max_iterations = 5
+  
     
     print(f"[DeepResearch] Starting deep research for: {query}")
 
     research_state = DeepResearchState()
-    research_state.max_iterations = max_iterations
+   
 
     state["deep_research_state"] = {
         "research_plan": research_state.research_plan,

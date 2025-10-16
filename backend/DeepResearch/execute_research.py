@@ -294,8 +294,8 @@ async def execute_research_node(state: GraphState) -> GraphState:
         await chunk_callback(iteration_info)
 
     extractor = WebPageExtractor()
-    llm_model=state.get("llm_model")
-    llm=get_llm(llm_model, 0.01)
+    llm_model=state.get("deep_research_llm_model")
+    llm=get_reasoning_llm(llm_model)
     # llm = get_reasoning_llm()
     
     findings = []

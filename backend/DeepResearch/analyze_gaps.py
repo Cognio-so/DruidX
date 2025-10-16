@@ -4,7 +4,7 @@ from langchain_core.messages import HumanMessage
 from llm import get_reasoning_llm, get_llm
 from DeepResearch.prompt_loader import PROMPTS
 
-llm1 = get_reasoning_llm()
+
 
 async def analyze_gaps_node(state: GraphState) -> GraphState:
     """
@@ -13,7 +13,7 @@ async def analyze_gaps_node(state: GraphState) -> GraphState:
     """
     research_state_dict = state["deep_research_state"]
     user_query = state.get("user_query", '')
-    llm_model = state.get("llm_model", "gpt-4o")
+    llm_model = state.get("deep_research_llm_model","alibaba/tongyi-deepresearch-30b-a3b:free")
 
     chunk_callback = state.get("_chunk_callback")
     gap_intro = "## 🔍 Gap Analysis Phase\n\nAnalyzing gathered information and identifying knowledge gaps...\n\n"
@@ -58,7 +58,7 @@ async def analyze_gaps_node(state: GraphState) -> GraphState:
         max_iterations=research_state_dict["max_iterations"],
         info_summary=info_summary_text
     )
-    llm2 = get_llm(llm_model, 0.01)
+    llm2 = get_reasoning_llm(llm_model)
     full_response = gap_intro + analysis_info + (answered_section if answered_questions else "") + generating_msg
     
     async for chunk in llm2.astream([HumanMessage(content=analysis_prompt)]):

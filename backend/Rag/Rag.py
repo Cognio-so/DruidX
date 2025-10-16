@@ -508,7 +508,7 @@ You **MUST** respond with a single, valid JSON object and nothing else.
 }}
 """ 
     llm = ChatGroq(
-        model="openai/gpt-oss-120b",  # Groq's model name for GPT OSS 20B 128k
+        model="openai/gpt-oss-120b",  
         temperature=0.4,
         groq_api_key=os.getenv("GROQ_API_KEY")
     )

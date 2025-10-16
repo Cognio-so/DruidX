@@ -49,7 +49,6 @@ export function UserSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const { state } = useSidebar();
   const pathname = usePathname();
 
-  // Add isActive property based on current pathname
   const navMain = navItems.map((item) => ({
     ...item,
     isActive: pathname === item.url || (item.url !== "/dashboard" && pathname.startsWith(item.url)),

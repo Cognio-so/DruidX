@@ -6,6 +6,7 @@ interface Message {
   content: string;
   timestamp: string;
   isStreaming?: boolean;
+  imageUrls?: string[];
 }
 
 interface ChatRequest {
@@ -109,16 +110,17 @@ export function useStreamingChat(sessionId: string): StreamingChatHook {
               const data = JSON.parse(line.slice(6));
               
               if (data.type === 'content' && data.data) {
-                const { content, full_response, is_complete } = data.data;
+                const { content, full_response, is_complete, img_urls } = data.data;
                 
                 // Debug logging to see what we're receiving
-                console.log('Streaming data received:', { content, full_response, is_complete });
+                console.log('Streaming data received:', { content, full_response, is_complete, img_urls });
                 
                 setMessages(prev => prev.map(msg => 
                   msg.id === assistantMessageId 
                     ? {
                         ...msg,
                         content: full_response || content || '',
+                        imageUrls: img_urls || msg.imageUrls, // Preserve existing if not in update
                         isStreaming: !is_complete,
                       }
                     : msg

@@ -86,6 +86,7 @@ export default function ChatGptById() {
                   isUser={msg.role === 'user'}
                   timestamp={new Date(msg.timestamp).toLocaleTimeString()}
                   isStreaming={msg.isStreaming}
+                  imageUrls={msg.imageUrls}
                 />
               ))}
             </div>

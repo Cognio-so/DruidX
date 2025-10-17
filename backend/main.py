@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
@@ -19,6 +19,7 @@ from models import (
     GPTConfig, GPTResponse, DocumentResponse,
     SessionInfo, DocumentInfo
 )
+from MCP.mcp import MCPNode
 
 try:
     from dotenv import load_dotenv
@@ -130,7 +131,13 @@ async def set_gpt_config(session_id: str, gpt_config: dict):
     """Set GPT configuration for a session"""
     session = SessionManager.get_session(session_id)
     session["gpt_config"] = gpt_config
+    
+    # Store MCP connections in session
+    mcp_connections = gpt_config.get("mcpConnections", [])
+    session["mcp_connections"] = mcp_connections
+    
     print(f"gpt config..........." , gpt_config)
+    print(f"mcp connections..........." , mcp_connections)
     
     # Pre-process KB if available
     if session.get("kb"):
@@ -396,6 +403,7 @@ async def stream_chat(session_id: str, request: ChatRequest):
             uploaded_doc=request.uploaded_doc,
             mcp=gpt_config.get("mcp", False),
             mcp_schema=gpt_config.get("mcpSchema"),
+            mcp_connections=session.get("mcp_connections", []),
             last_route=session.get("last_route"), 
             session_id=session_id,  
             context={  
@@ -627,6 +635,7 @@ async def stream_deep_research(session_id: str, request: ChatRequest):
             uploaded_doc=request.uploaded_doc,
             mcp=gpt_config.get("mcp", False),
             mcp_schema=gpt_config.get("mcpSchema"),
+            mcp_connections=session.get("mcp_connections", []),
             last_route=session.get("last_route"), 
             session_id=session_id,  
             context={  
@@ -750,6 +759,51 @@ async def delete_session(session_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
     del sessions[session_id]
     return {"message": "Session deleted successfully"}
+
+# MCP Endpoints
+@app.get("/api/mcp/available-tools")
+async def get_available_mcp_tools():
+    """Get list of available Composio tools/apps"""
+    try:
+        tools = MCPNode.get_available_tools()
+        return {"tools": tools}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch available tools: {str(e)}")
+
+@app.post("/api/mcp/connect")
+async def initiate_mcp_connection(request: dict):
+    """Initiate OAuth connection for a GPT to a specific app"""
+    try:
+        gpt_id = request.get("gpt_id")
+        app_name = request.get("app_name")
+        redirect_url = request.get("redirect_url")
+        
+        if not gpt_id or not app_name:
+            raise HTTPException(status_code=400, detail="gpt_id and app_name are required")
+        
+        result = MCPNode.initiate_connection(gpt_id, app_name, redirect_url)
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to initiate connection: {str(e)}")
+
+@app.get("/api/mcp/connections/{gpt_id}")
+async def get_mcp_connections(gpt_id: str):
+    """Get all active connections for a GPT"""
+    try:
+        connections = await MCPNode.get_user_connections(gpt_id)
+        return {"gpt_id": gpt_id, "connections": connections}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch connections: {str(e)}")
+
+@app.get("/api/mcp/callback")
+async def mcp_callback(request: Request):
+    """Handle OAuth callback after authentication"""
+    connection_request_id = request.query_params.get("connection_request_id")
+    if not connection_request_id:
+        return {"status": "error", "message": "Missing connection_request_id"}
+    
+    return {"status": "success", "connection_request_id": connection_request_id}
 
 @app.get("/api/health")
 async def health_check():

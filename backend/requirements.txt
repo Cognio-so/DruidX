@@ -33,3 +33,4 @@ langchain_google_genai
 tavily-python
 replicate
 langchain-groq
+composio
